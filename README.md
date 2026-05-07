@@ -24,12 +24,30 @@ A simple, modern, and clean Point of Sale (POS) application built with **Flutter
 |-------|-----------|
 | Framework | Flutter 3.x |
 | State Management | flutter_bloc |
-| Backend | Supabase (Auth + Database + Storage) |
+| Backend | Supabase (Auth + DB + Storage) |
 | Navigation | go_router |
-| Architecture | Clean Architecture + Feature-based folders |
+| Architecture | Clean Architecture + Feature-based |
+| Responsive UI | flutter_screenutil |
 | Charts | fl_chart |
 | Barcode | mobile_scanner |
-| Export | pdf, printing, syncfusion_flutter_xlsio |
+| PDF/Export | pdf, printing, syncfusion_flutter_xlsio |
+
+---
+
+## ✅ Phase 1: Foundation & Core Setup (COMPLETE)
+
+The following components have been fully implemented in the initial phase:
+
+- **Project Foundation**: Flutter project initialized for Android, iOS, and Web.
+- **Architecture**: Clean architecture folder structure implemented with 35+ files.
+- **Services**: Supabase service initialized with environment variable support.
+- **Theming**: Premium Material 3 design system with light/dark modes and Inter font.
+- **Navigation**: go_router with ShellRoute for persistent bottom navigation.
+- **Domain Models**: Full models for UserProfile, Product, Category, CartItem, Transaction, and InventoryLog.
+- **Data Layer**: Repositories for Auth, Products, and Transactions with Supabase integration.
+- **State Management**: BLoCs for Auth, Product, Cart, Transaction, and Dashboard.
+- **UI Components**: Core widgets like PosCard, PosSearchBar, PosStatCard, and PosLoadingIndicator.
+- **Screens**: Initial implementations of Login, Dashboard, and Product List screens.
 
 ---
 
@@ -44,6 +62,13 @@ cd My-POS
 
 ### 2. Set up environment files
 
+This project uses two separate Supabase environments:
+
+| Environment | File | Entry Point |
+|-------------|------|-------------|
+| Staging | `.env.staging` | `lib/main_staging.dart` |
+| Production | `.env.production` | `lib/main_production.dart` |
+
 Copy the example files and fill in your Supabase credentials:
 
 ```bash
@@ -51,13 +76,7 @@ cp .env.staging.example .env.staging
 cp .env.production.example .env.production
 ```
 
-Edit each file:
-
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-APP_ENV=staging   # or production
-```
+> ⚠️ Never commit `.env.staging` or `.env.production`. They are gitignored. Use the `.example` files as templates.
 
 ### 3. Install dependencies
 
@@ -183,37 +202,23 @@ flutter run -t lib/main_staging.dart -d ios         # iOS
 lib/
 ├── core/
 │   ├── config/          # FlavorConfig (staging/production)
-│   ├── constants/       # Colors, sizes, app constants
-│   ├── errors/          # Failure & Exception classes
-│   ├── extensions/      # DateTime, number, string utilities
-│   ├── theme/           # Light & dark theme
-│   └── widgets/         # Shared UI components
+│   ├── constants/       # app_colors, app_constants, app_sizes
+│   ├── errors/          # exceptions, failures
+│   ├── extensions/      # datetime, number, string utilities
+│   ├── theme/           # app_theme
+│   └── widgets/         # pos_card, pos_empty_state, pos_loading_indicator, etc.
 ├── features/
-│   ├── auth/            # Login, session, roles
-│   ├── dashboard/       # Revenue overview & charts
-│   ├── inventory/       # Stock management
-│   ├── pos/             # Cashier / checkout flow
-│   ├── products/        # Product & category CRUD
-│   ├── settings/        # App configuration
-│   └── transactions/    # Transaction history & reports
-├── routing/             # go_router setup + shell scaffold
-├── services/            # Supabase client
-├── main_staging.dart    # Staging entry point
-└── main_production.dart # Production entry point
+│   ├── auth/            # AuthRepository, UserProfile, AuthBloc, LoginScreen
+│   ├── dashboard/       # DashboardBloc, DashboardScreen
+│   ├── inventory/       # InventoryLog model
+│   ├── pos/             # CartItem, CartBloc, PosScreen
+│   ├── products/        # ProductRepository, Product model, ProductListScreen
+│   ├── settings/        # SettingsScreen
+│   └── transactions/    # TransactionRepository, Transaction model, TransactionListScreen
+├── routing/             # app_router, shell_scaffold
+├── services/            # supabase_service
+└── main.dart            # Shared bootstrap entry point
 ```
-
----
-
-## 🔐 Environment Setup
-
-This project uses two separate Supabase environments:
-
-| Environment | File | Entry Point |
-|-------------|------|-------------|
-| Staging | `.env.staging` | `lib/main_staging.dart` |
-| Production | `.env.production` | `lib/main_production.dart` |
-
-> ⚠️ Never commit `.env.staging` or `.env.production`. They are gitignored. Use the `.example` files as templates.
 
 ---
 
@@ -234,16 +239,16 @@ flutter build web -t lib/main_production.dart --release
 
 ## 🗺 Roadmap
 
-- [x] Phase 1 — Foundation, theming, routing, core architecture
-- [ ] Phase 2 — Auth flow & session management
-- [ ] Phase 3 — Product management (full CRUD + image upload)
-- [ ] Phase 4 — POS / Cashier system
-- [ ] Phase 5 — Barcode scanner
-- [ ] Phase 6 — Transaction history
-- [ ] Phase 7 — Inventory management
-- [ ] Phase 8 — Dashboard charts & analytics
-- [ ] Phase 9 — Reports & PDF/Excel export
-- [ ] Phase 10 — Settings & store configuration
+- [x] **Phase 1**: Foundation, theming, routing, core architecture
+- [ ] **Phase 2**: Authentication (screens & flow, session persistence, PIN login)
+- [ ] **Phase 3**: Product Management (Add/Edit screens, image upload, category CRUD)
+- [ ] **Phase 4**: POS / Cashier System (Checkout flow, payment selection, receipt generation)
+- [ ] **Phase 5**: Barcode Scanner (Camera scanning integration)
+- [ ] **Phase 6**: Transaction History (Detail screens, date filtering)
+- [ ] **Phase 7**: Inventory Management (Stock in/out UI, warnings)
+- [ ] **Phase 8**: Dashboard (Enhanced charts & real-time analytics)
+- [ ] **Phase 9**: Reports & Export (PDF/Excel generation)
+- [ ] **Phase 10**: Settings (Store info, tax, currency configuration)
 
 ---
 
