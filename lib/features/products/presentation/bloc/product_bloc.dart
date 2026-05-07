@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_pos/features/products/data/repositories/product_repository.dart';
@@ -10,122 +11,162 @@ abstract class ProductEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class ProductsLoadRequested extends ProductEvent {
+class ProductLoadProductsRequested extends ProductEvent {
   final String? categoryId;
   final String? search;
-
-  ProductsLoadRequested({this.categoryId, this.search});
-
+  ProductLoadProductsRequested({this.categoryId, this.search});
   @override
   List<Object?> get props => [categoryId, search];
 }
 
 class ProductCreateRequested extends ProductEvent {
   final Product product;
-  ProductCreateRequested(this.product);
+  final Uint8List? imageBytes;
+  final String? imageName;
+
+  ProductCreateRequested(this.product, {this.imageBytes, this.imageName});
 
   @override
-  List<Object?> get props => [product];
+  List<Object?> get props => [product, imageBytes, imageName];
 }
 
 class ProductUpdateRequested extends ProductEvent {
   final Product product;
-  ProductUpdateRequested(this.product);
+  final Uint8List? imageBytes;
+  final String? imageName;
+
+  ProductUpdateRequested(this.product, {this.imageBytes, this.imageName});
 
   @override
-  List<Object?> get props => [product];
+  List<Object?> get props => [product, imageBytes, imageName];
 }
 
 class ProductDeleteRequested extends ProductEvent {
   final String productId;
   ProductDeleteRequested(this.productId);
-
   @override
   List<Object?> get props => [productId];
 }
 
-class CategoriesLoadRequested extends ProductEvent {}
+class ProductLoadCategoriesRequested extends ProductEvent {}
 
-// ─── States ───
-abstract class ProductState extends Equatable {
+class ProductCreateCategoryRequested extends ProductEvent {
+  final Category category;
+  ProductCreateCategoryRequested(this.category);
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [category];
 }
 
-class ProductInitial extends ProductState {}
+class ProductUpdateCategoryRequested extends ProductEvent {
+  final Category category;
+  ProductUpdateCategoryRequested(this.category);
+  @override
+  List<Object?> get props => [category];
+}
 
-class ProductLoading extends ProductState {}
+class ProductDeleteCategoryRequested extends ProductEvent {
+  final String categoryId;
+  ProductDeleteCategoryRequested(this.categoryId);
+  @override
+  List<Object?> get props => [categoryId];
+}
 
-class ProductsLoaded extends ProductState {
+// ─── States ───
+class ProductState extends Equatable {
   final List<Product> products;
   final List<Category> categories;
+  final bool isLoading;
+  final String? error;
+  final String? successMessage;
   final String? selectedCategoryId;
   final String? searchQuery;
 
-  ProductsLoaded({
-    required this.products,
+  const ProductState({
+    this.products = const [],
     this.categories = const [],
+    this.isLoading = false,
+    this.error,
+    this.successMessage,
     this.selectedCategoryId,
     this.searchQuery,
   });
 
+  ProductState copyWith({
+    List<Product>? products,
+    List<Category>? categories,
+    bool? isLoading,
+    String? error,
+    String? successMessage,
+    String? selectedCategoryId,
+    String? searchQuery,
+  }) {
+    return ProductState(
+      products: products ?? this.products,
+      categories: categories ?? this.categories,
+      isLoading: isLoading ?? this.isLoading,
+      error: error, // Don't persist error
+      successMessage: successMessage, // Don't persist success message
+      selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
+      searchQuery: searchQuery ?? this.searchQuery,
+    );
+  }
+
   @override
-  List<Object?> get props => [products, categories, selectedCategoryId, searchQuery];
-}
-
-class ProductError extends ProductState {
-  final String message;
-  ProductError(this.message);
-
-  @override
-  List<Object?> get props => [message];
-}
-
-class ProductActionSuccess extends ProductState {
-  final String message;
-  ProductActionSuccess(this.message);
-
-  @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [
+        products,
+        categories,
+        isLoading,
+        error,
+        successMessage,
+        selectedCategoryId,
+        searchQuery,
+      ];
 }
 
 // ─── Bloc ───
 class ProductBloc extends Bloc<ProductEvent, ProductState> {
   final ProductRepository _repository;
-  List<Category> _cachedCategories = [];
 
   ProductBloc({required ProductRepository repository})
       : _repository = repository,
-        super(ProductInitial()) {
-    on<ProductsLoadRequested>(_onLoadProducts);
+        super(const ProductState()) {
+    on<ProductLoadProductsRequested>(_onLoadProducts);
     on<ProductCreateRequested>(_onCreateProduct);
     on<ProductUpdateRequested>(_onUpdateProduct);
     on<ProductDeleteRequested>(_onDeleteProduct);
-    on<CategoriesLoadRequested>(_onLoadCategories);
+    on<ProductLoadCategoriesRequested>(_onLoadCategories);
+    on<ProductCreateCategoryRequested>(_onCreateCategory);
+    on<ProductUpdateCategoryRequested>(_onUpdateCategory);
+    on<ProductDeleteCategoryRequested>(_onDeleteCategory);
   }
 
   Future<void> _onLoadProducts(
-    ProductsLoadRequested event,
+    ProductLoadProductsRequested event,
     Emitter<ProductState> emit,
   ) async {
-    emit(ProductLoading());
+    emit(state.copyWith(isLoading: true));
     try {
       final products = await _repository.getProducts(
         categoryId: event.categoryId,
         search: event.search,
         activeOnly: false,
       );
-      if (_cachedCategories.isEmpty) {
-        _cachedCategories = await _repository.getCategories();
+      
+      // If categories are empty, load them too
+      List<Category> categories = state.categories;
+      if (categories.isEmpty) {
+        categories = await _repository.getCategories();
       }
-      emit(ProductsLoaded(
+
+      emit(state.copyWith(
+        isLoading: false,
         products: products,
-        categories: _cachedCategories,
+        categories: categories,
         selectedCategoryId: event.categoryId,
         searchQuery: event.search,
       ));
     } catch (e) {
-      emit(ProductError(e.toString()));
+      emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
 
@@ -133,12 +174,26 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     ProductCreateRequested event,
     Emitter<ProductState> emit,
   ) async {
+    emit(state.copyWith(isLoading: true));
     try {
-      await _repository.createProduct(event.product);
-      emit(ProductActionSuccess('Product created successfully'));
-      add(ProductsLoadRequested());
+      String? imageUrl = event.product.imageUrl;
+      if (event.imageBytes != null && event.imageName != null) {
+        imageUrl = await _repository.uploadProductImage(
+          event.imageName!,
+          event.imageBytes!,
+        );
+      }
+
+      final product = event.product.copyWith(imageUrl: imageUrl);
+      await _repository.createProduct(product);
+      
+      emit(state.copyWith(successMessage: 'Product created successfully'));
+      add(ProductLoadProductsRequested(
+        categoryId: state.selectedCategoryId,
+        search: state.searchQuery,
+      ));
     } catch (e) {
-      emit(ProductError(e.toString()));
+      emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
 
@@ -146,12 +201,26 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     ProductUpdateRequested event,
     Emitter<ProductState> emit,
   ) async {
+    emit(state.copyWith(isLoading: true));
     try {
-      await _repository.updateProduct(event.product);
-      emit(ProductActionSuccess('Product updated successfully'));
-      add(ProductsLoadRequested());
+      String? imageUrl = event.product.imageUrl;
+      if (event.imageBytes != null && event.imageName != null) {
+        imageUrl = await _repository.uploadProductImage(
+          event.imageName!,
+          event.imageBytes!,
+        );
+      }
+
+      final product = event.product.copyWith(imageUrl: imageUrl);
+      await _repository.updateProduct(product);
+      
+      emit(state.copyWith(successMessage: 'Product updated successfully'));
+      add(ProductLoadProductsRequested(
+        categoryId: state.selectedCategoryId,
+        search: state.searchQuery,
+      ));
     } catch (e) {
-      emit(ProductError(e.toString()));
+      emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
 
@@ -159,25 +228,71 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     ProductDeleteRequested event,
     Emitter<ProductState> emit,
   ) async {
+    emit(state.copyWith(isLoading: true));
     try {
       await _repository.deleteProduct(event.productId);
-      emit(ProductActionSuccess('Product deleted successfully'));
-      add(ProductsLoadRequested());
+      emit(state.copyWith(successMessage: 'Product deleted successfully'));
+      add(ProductLoadProductsRequested(
+        categoryId: state.selectedCategoryId,
+        search: state.searchQuery,
+      ));
     } catch (e) {
-      emit(ProductError(e.toString()));
+      emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
 
   Future<void> _onLoadCategories(
-    CategoriesLoadRequested event,
+    ProductLoadCategoriesRequested event,
     Emitter<ProductState> emit,
   ) async {
+    emit(state.copyWith(isLoading: true));
     try {
-      _cachedCategories = await _repository.getCategories();
-      // Reload products with updated categories
-      add(ProductsLoadRequested());
+      final categories = await _repository.getCategories();
+      emit(state.copyWith(isLoading: false, categories: categories));
     } catch (e) {
-      emit(ProductError(e.toString()));
+      emit(state.copyWith(isLoading: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onCreateCategory(
+    ProductCreateCategoryRequested event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(isLoading: true));
+    try {
+      await _repository.createCategory(event.category);
+      emit(state.copyWith(successMessage: 'Category created successfully'));
+      add(ProductLoadCategoriesRequested());
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateCategory(
+    ProductUpdateCategoryRequested event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(isLoading: true));
+    try {
+      await _repository.updateCategory(event.category);
+      emit(state.copyWith(successMessage: 'Category updated successfully'));
+      add(ProductLoadCategoriesRequested());
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteCategory(
+    ProductDeleteCategoryRequested event,
+    Emitter<ProductState> emit,
+  ) async {
+    emit(state.copyWith(isLoading: true));
+    try {
+      await _repository.deleteCategory(event.categoryId);
+      emit(state.copyWith(successMessage: 'Category deleted successfully'));
+      add(ProductLoadCategoriesRequested());
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
 }

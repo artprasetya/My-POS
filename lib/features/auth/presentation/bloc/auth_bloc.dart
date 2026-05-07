@@ -38,6 +38,15 @@ class AuthRegisterRequested extends AuthEvent {
 
 class AuthLogoutRequested extends AuthEvent {}
 
+class AuthPinLoginRequested extends AuthEvent {
+  final String pin;
+
+  AuthPinLoginRequested({required this.pin});
+
+  @override
+  List<Object?> get props => [pin];
+}
+
 // ─── States ───
 abstract class AuthState extends Equatable {
   @override
@@ -79,6 +88,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
+    on<AuthPinLoginRequested>(_onPinLoginRequested);
   }
 
   Future<void> _onCheckRequested(
@@ -138,5 +148,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     await _repository.logout();
     emit(AuthUnauthenticated());
+  }
+
+  Future<void> _onPinLoginRequested(
+    AuthPinLoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final profile = await _repository.loginWithPin(event.pin);
+      if (profile != null) {
+        emit(AuthAuthenticated(profile));
+      } else {
+        emit(AuthError('Invalid PIN'));
+      }
+    } catch (e) {
+      emit(AuthError(e.toString().replaceAll('Exception: ', '')));
+    }
   }
 }

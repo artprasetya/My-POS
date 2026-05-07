@@ -19,6 +19,7 @@ class AppSizes {
   static const double radiusXl = 20.0;
   static const double radiusXxl = 24.0;
   static const double radiusFull = 999.0;
+  static const double radiusRound = 999.0;
 
   // ─── Icon Sizes ───
   static const double iconSm = 16.0;

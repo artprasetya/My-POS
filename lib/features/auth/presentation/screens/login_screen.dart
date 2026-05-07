@@ -304,6 +304,54 @@ class _LoginScreenState extends State<LoginScreen> {
                           )
                               .animate()
                               .fadeIn(delay: 800.ms, duration: 400.ms),
+
+                          const SizedBox(height: AppSizes.xl),
+                          // Divider
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Divider(
+                                  color: isDark
+                                      ? AppColors.darkDivider
+                                      : AppColors.lightGray,
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSizes.md),
+                                child: Text(
+                                  'OR',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.mediumGray,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Divider(
+                                  color: isDark
+                                      ? AppColors.darkDivider
+                                      : AppColors.lightGray,
+                                ),
+                              ),
+                            ],
+                          ).animate().fadeIn(delay: 900.ms),
+                          const SizedBox(height: AppSizes.xl),
+
+                          // PIN Login Button
+                          OutlinedButton.icon(
+                            onPressed: () => context.push('/login/pin'),
+                            icon: const Icon(Icons.dialpad_rounded),
+                            label: const Text('Sign in with PIN'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 52),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppSizes.radiusMd),
+                              ),
+                            ),
+                          ).animate().fadeIn(delay: 1000.ms),
                         ],
                       ),
                     ),

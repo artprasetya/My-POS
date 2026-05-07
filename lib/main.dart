@@ -60,13 +60,20 @@ class MyPosApp extends StatelessWidget {
             create: (_) => DashboardBloc(repository: transactionRepository),
           ),
         ],
-        child: MaterialApp.router(
-          title: 'My POS${FlavorConfig.isStaging ? ' (Staging)' : ''}',
-          debugShowCheckedModeBanner: FlavorConfig.isStaging,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.light,
-          routerConfig: AppRouter.router,
+        child: Builder(
+          builder: (context) {
+            final authBloc = context.read<AuthBloc>();
+            final appRouter = AppRouter(authBloc);
+
+            return MaterialApp.router(
+              title: 'My POS${FlavorConfig.isStaging ? ' (Staging)' : ''}',
+              debugShowCheckedModeBanner: FlavorConfig.isStaging,
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: ThemeMode.light,
+              routerConfig: appRouter.router,
+            );
+          },
         ),
       ),
     );

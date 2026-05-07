@@ -26,7 +26,7 @@ dependencies:
 
   # Images
   cached_network_image: ^3.4.1
-  image_picker: ^1.2.1
+  image_picker: ^1.2.2
 
   # Responsive UI
   flutter_screenutil: ^5.9.3

@@ -41,6 +41,7 @@ class AppColors {
   static const Color darkBorder = Color(0xFF2D2D55);
   static const Color darkText = Color(0xFFE8E8F0);
   static const Color darkTextSecondary = Color(0xFF8888AA);
+  static const Color darkDivider = Color(0xFF2D2D55);
 
   // ─── Gradients ───
   static const LinearGradient primaryGradient = LinearGradient(

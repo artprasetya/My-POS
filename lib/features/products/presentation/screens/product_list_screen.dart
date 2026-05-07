@@ -25,7 +25,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ProductBloc>().add(ProductsLoadRequested());
+    context.read<ProductBloc>().add(ProductLoadProductsRequested());
   }
 
   @override
@@ -35,13 +35,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   void _onSearch(String query) {
-    context.read<ProductBloc>().add(ProductsLoadRequested(
+    context.read<ProductBloc>().add(ProductLoadProductsRequested(
           search: query, categoryId: _selectedCategoryId));
   }
 
   void _onCategorySelected(String? categoryId) {
     setState(() => _selectedCategoryId = categoryId);
-    context.read<ProductBloc>().add(ProductsLoadRequested(
+    context.read<ProductBloc>().add(ProductLoadProductsRequested(
           categoryId: categoryId, search: _searchController.text));
   }
 
@@ -51,6 +51,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
       appBar: AppBar(
         title: const Text('Products'),
         actions: [
+          IconButton(
+            onPressed: () => context.push('/products/categories'),
+            icon: const Icon(Icons.category_outlined),
+            tooltip: 'Manage Categories',
+          ),
           IconButton(
             onPressed: () => context.push('/products/add'),
             icon: Container(
@@ -65,56 +70,64 @@ class _ProductListScreenState extends State<ProductListScreen> {
           const SizedBox(width: AppSizes.sm),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSizes.lg),
-            child: Column(
-              children: [
-                PosSearchBar(
-                  controller: _searchController,
-                  hintText: 'Search products...',
-                  onChanged: _onSearch,
-                ),
-                const SizedBox(height: AppSizes.md),
-                _buildCategoryChips(),
-              ],
+      body: BlocListener<ProductBloc, ProductState>(
+        listener: (context, state) {
+          if (state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(state.successMessage!),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ));
+          }
+          if (state.error != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(state.error!),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ));
+          }
+        },
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSizes.lg),
+              child: Column(
+                children: [
+                  PosSearchBar(
+                    controller: _searchController,
+                    hintText: 'Search products...',
+                    onChanged: _onSearch,
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  _buildCategoryChips(),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: BlocConsumer<ProductBloc, ProductState>(
-              listener: (context, state) {
-                if (state is ProductActionSuccess) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(state.message),
-                    backgroundColor: AppColors.success,
-                  ));
-                }
-              },
-              builder: (context, state) {
-                if (state is ProductLoading) {
-                  return const PosLoadingIndicator(message: 'Loading products...');
-                }
-                if (state is ProductsLoaded) {
+            Expanded(
+              child: BlocBuilder<ProductBloc, ProductState>(
+                builder: (context, state) {
+                  if (state.isLoading && state.products.isEmpty) {
+                    return const PosLoadingIndicator(message: 'Loading products...');
+                  }
+                  
                   if (state.products.isEmpty) {
                     return PosEmptyState(
                       icon: Icons.inventory_2_outlined,
                       title: 'No Products Found',
-                      subtitle: 'Add your first product to get started',
+                      subtitle: state.searchQuery != null || state.selectedCategoryId != null
+                          ? 'Try adjusting your filters'
+                          : 'Add your first product to get started',
                       actionText: 'Add Product',
                       onAction: () => context.push('/products/add'),
                     );
                   }
+                  
                   return _buildProductGrid(state.products);
-                }
-                if (state is ProductError) {
-                  return Center(child: Text(state.message));
-                }
-                return const SizedBox.shrink();
-              },
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -122,7 +135,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
   Widget _buildCategoryChips() {
     return BlocBuilder<ProductBloc, ProductState>(
       builder: (context, state) {
-        final categories = state is ProductsLoaded ? state.categories : [];
+        final categories = state.categories;
         return SizedBox(
           height: 36,
           child: ListView(
@@ -206,7 +219,7 @@ class _ProductCard extends StatelessWidget {
                   color: isDark ? AppColors.darkSurface : AppColors.extraLightGray,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSizes.radiusLg)),
                 ),
-                child: product.imageUrl != null
+                child: product.imageUrl != null && product.imageUrl!.isNotEmpty
                     ? ClipRRect(
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(AppSizes.radiusLg)),
                         child: Image.network(product.imageUrl!, fit: BoxFit.cover,
