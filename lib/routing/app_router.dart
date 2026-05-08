@@ -9,6 +9,7 @@ import 'package:my_pos/features/products/presentation/screens/category_managemen
 import 'package:my_pos/features/products/presentation/screens/add_edit_product_screen.dart';
 import 'package:my_pos/features/pos/presentation/screens/pos_screen.dart';
 import 'package:my_pos/features/transactions/presentation/screens/transaction_list_screen.dart';
+import 'package:my_pos/features/transactions/presentation/screens/transaction_detail_screen.dart';
 import 'package:my_pos/features/settings/presentation/screens/settings_screen.dart';
 import 'package:my_pos/routing/shell_scaffold.dart';
 import 'package:my_pos/routing/go_router_refresh_stream.dart';
@@ -92,6 +93,14 @@ class AppRouter {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: TransactionListScreen(),
             ),
+            routes: [
+              GoRoute(
+                path: ':id',
+                builder: (context, state) => TransactionDetailScreen(
+                  transactionId: state.pathParameters['id']!,
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: '/settings',

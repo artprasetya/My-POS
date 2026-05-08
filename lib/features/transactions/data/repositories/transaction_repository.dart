@@ -84,7 +84,7 @@ class TransactionRepository {
     int limit = 50,
   }) async {
     var query = SupabaseService.table('transactions')
-        .select('*, transaction_items(*), profiles(full_name)');
+        .select('*, transaction_items(*)');
 
     if (startDate != null) {
       query = query.gte('created_at', startDate.toIso8601String());
@@ -106,7 +106,7 @@ class TransactionRepository {
   // ─── Get Transaction Detail ───
   Future<Transaction> getTransaction(String id) async {
     final data = await SupabaseService.table('transactions')
-        .select('*, transaction_items(*), profiles(full_name)')
+        .select('*, transaction_items(*)')
         .eq('id', id)
         .single();
     return Transaction.fromJson(data);
