@@ -5,8 +5,10 @@ import 'package:my_pos/core/constants/app_sizes.dart';
 import 'package:my_pos/core/extensions/number_extensions.dart';
 import 'package:my_pos/core/utils/receipt_service.dart';
 import 'package:my_pos/features/pos/presentation/bloc/cart_bloc.dart';
-import 'package:my_pos/features/transactions/domain/models/transaction.dart' as model;
+import 'package:my_pos/features/transactions/domain/models/transaction.dart'
+    as model;
 import 'package:my_pos/features/transactions/presentation/bloc/transaction_bloc.dart';
+import 'package:my_pos/l10n/app_localizations.dart';
 
 class CheckoutDialog extends StatefulWidget {
   final CartState cartState;
@@ -56,20 +58,24 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return BlocListener<TransactionBloc, TransactionState>(
       listener: (context, state) {
         if (state is TransactionCreateSuccess) {
           context.read<CartBloc>().add(CartCleared());
           Navigator.pop(context); // Close checkout dialog
-          _showReceiptDialog(context, state.transaction);
+          _showReceiptDialog(context, state.transaction, l10n);
         } else if (state is TransactionError) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: AppColors.error),
+            SnackBar(
+                content: Text(state.message), backgroundColor: AppColors.error),
           );
         }
       },
       child: Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.radiusLg)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSizes.radiusLg)),
         child: Container(
           width: 450,
           padding: const EdgeInsets.all(AppSizes.xl),
@@ -77,14 +83,16 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Checkout',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              Text(
+                l10n.checkout,
+                style:
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: AppSizes.lg),
-              _buildSummary(),
+              _buildSummary(l10n),
               const SizedBox(height: AppSizes.xl),
-              const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Payment Method',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: AppSizes.md),
               _buildPaymentMethods(),
               const SizedBox(height: AppSizes.xl),
@@ -104,7 +112,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
                       ),
                       child: isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('Complete Payment'),
+                          : Text(l10n.checkout),
                     ),
                   );
                 },
@@ -116,7 +124,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     );
   }
 
-  Widget _buildSummary() {
+  Widget _buildSummary(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
@@ -126,7 +134,7 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('Total Amount', style: TextStyle(fontSize: 16)),
+          Text(l10n.total, style: const TextStyle(fontSize: 16)),
           Text(
             widget.cartState.totalAmount.toCurrency(),
             style: const TextStyle(
@@ -171,7 +179,8 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Cash Received', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text('Cash Received',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: AppSizes.sm),
         TextField(
           controller: _cashController,
@@ -202,11 +211,12 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     );
   }
 
-  void _showReceiptDialog(BuildContext context, dynamic transaction) {
+  void _showReceiptDialog(
+      BuildContext context, dynamic transaction, AppLocalizations l10n) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => ReceiptDialog(transaction: transaction),
+      builder: (context) => ReceiptDialog(transaction: transaction, l10n: l10n),
     );
   }
 }
@@ -242,7 +252,8 @@ class _PaymentMethodCard extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Icon(icon, color: isSelected ? AppColors.primary : AppColors.mediumGray),
+              Icon(icon,
+                  color: isSelected ? AppColors.primary : AppColors.mediumGray),
               const SizedBox(height: AppSizes.sm),
               Text(
                 label,
@@ -261,23 +272,27 @@ class _PaymentMethodCard extends StatelessWidget {
 
 class ReceiptDialog extends StatelessWidget {
   final dynamic transaction;
-  const ReceiptDialog({super.key, required this.transaction});
+  final AppLocalizations l10n;
+  const ReceiptDialog(
+      {super.key, required this.transaction, required this.l10n});
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.radiusLg)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusLg)),
       child: Container(
         width: 400,
         padding: const EdgeInsets.all(AppSizes.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 64),
+            const Icon(Icons.check_circle_rounded,
+                color: AppColors.success, size: 64),
             const SizedBox(height: AppSizes.lg),
-            const Text(
-              'Payment Successful',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              l10n.paymentSuccessful,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: AppSizes.sm),
             Text(
@@ -290,10 +305,11 @@ class ReceiptDialog extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Total Paid', style: TextStyle(fontSize: 16)),
+                Text(l10n.total, style: const TextStyle(fontSize: 16)),
                 Text(
                   (transaction.total as double).toCurrency(),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -303,18 +319,19 @@ class ReceiptDialog extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
+                    child: Text(l10n.cancel),
                   ),
                 ),
                 const SizedBox(width: AppSizes.md),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => ReceiptService.generateAndPrint(transaction as model.Transaction),
+                    onPressed: () => ReceiptService.generateAndPrint(
+                        transaction as model.Transaction),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                     ),
-                    child: const Text('Print Receipt'),
+                    child: Text(l10n.printReceipt),
                   ),
                 ),
               ],

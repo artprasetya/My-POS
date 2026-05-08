@@ -8,6 +8,7 @@ import 'package:my_pos/core/constants/app_sizes.dart';
 import 'package:my_pos/core/utils/excel_export_service.dart';
 import 'package:my_pos/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:my_pos/features/transactions/data/repositories/transaction_repository.dart';
+import 'package:my_pos/l10n/app_localizations.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -21,11 +22,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   DateTime _endDate = DateTime.now();
   bool _isExporting = false;
 
-  final _currencyFormat = NumberFormat.currency(
-    locale: 'id_ID',
-    symbol: 'Rp ',
-    decimalDigits: 0,
-  );
+  late NumberFormat _currencyFormat;
 
   @override
   void initState() {
@@ -33,11 +30,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _loadData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _currencyFormat = NumberFormat.currency(
+      locale: Localizations.localeOf(context).toString(),
+      symbol:
+          Localizations.localeOf(context).languageCode == 'id' ? 'Rp ' : ' ',
+      decimalDigits: 0,
+    );
+  }
+
   void _loadData() {
     context.read<DashboardBloc>().add(DashboardLoadRequested());
   }
 
-  Future<void> _exportData() async {
+  Future<void> _exportData(AppLocalizations l10n) async {
     setState(() => _isExporting = true);
     try {
       final repo = context.read<TransactionRepository>();
@@ -66,11 +74,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sales Reports'),
+        title: Text(l10n.reports),
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_today_outlined),
@@ -103,17 +112,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSummaryGrid(state),
+                _buildSummaryGrid(state, l10n),
                 const SizedBox(height: AppSizes.xl),
-                _buildChartSection(state, isDark),
+                _buildChartSection(state, isDark, l10n),
                 const SizedBox(height: AppSizes.xl),
-                _buildBestSellers(state, isDark),
+                _buildBestSellers(state, isDark, l10n),
                 const SizedBox(height: AppSizes.xl),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.history_rounded,
                       color: AppColors.primary),
-                  title: const Text('Detailed Sales History'),
+                  title: Text(l10n.detailedSalesHistory),
                   subtitle: const Text('View every transaction and receipt'),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => context.go('/reports/history'),
@@ -123,7 +132,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   width: double.infinity,
                   height: AppSizes.touchTargetLg,
                   child: ElevatedButton.icon(
-                    onPressed: _isExporting ? null : _exportData,
+                    onPressed: _isExporting ? null : () => _exportData(l10n),
                     icon: _isExporting
                         ? const SizedBox(
                             width: AppSizes.xl,
@@ -132,7 +141,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         : const Icon(Icons.file_download_outlined),
                     label: Text(_isExporting
                         ? 'Exporting...'
-                        : 'Export to Excel (.xlsx)'),
+                        : '${l10n.exportToExcel} (.xlsx)'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
@@ -151,7 +160,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildSummaryGrid(DashboardState state) {
+  Widget _buildSummaryGrid(DashboardState state, AppLocalizations l10n) {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -161,16 +170,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
       childAspectRatio: 1.5,
       children: [
         _buildStatCard(
-            'Total Revenue',
+            l10n.totalRevenue,
             _currencyFormat.format(state.totalRevenue),
             Icons.payments_outlined,
             AppColors.primary),
-        _buildStatCard('Orders', state.totalTransactions.toString(),
+        _buildStatCard(l10n.orders, state.totalTransactions.toString(),
             Icons.shopping_bag_outlined, Colors.orange),
         _buildStatCard(
-            'Products Sold', '124', Icons.inventory_2_outlined, Colors.blue),
+            l10n.productsSold, '124', Icons.inventory_2_outlined, Colors.blue),
         _buildStatCard(
-            'Net Profit',
+            l10n.netProfit,
             _currencyFormat.format(state.totalRevenue * 0.3),
             Icons.trending_up_rounded,
             Colors.green),
@@ -205,7 +214,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildChartSection(DashboardState state, bool isDark) {
+  Widget _buildChartSection(
+      DashboardState state, bool isDark, AppLocalizations l10n) {
     return Container(
       height: 300,
       padding: const EdgeInsets.all(AppSizes.lg),
@@ -218,8 +228,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Revenue Trend',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(l10n.revenueTrend,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSizes.xl),
           Expanded(
             child: LineChart(
@@ -256,7 +267,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildBestSellers(DashboardState state, bool isDark) {
+  Widget _buildBestSellers(
+      DashboardState state, bool isDark, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(AppSizes.lg),
       decoration: BoxDecoration(
@@ -268,8 +280,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Best Selling Products',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(l10n.bestSellingProducts,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: AppSizes.md),
           ...state.bestSellingProducts.map((item) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: AppSizes.sm),

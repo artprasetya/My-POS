@@ -11,6 +11,8 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   universal_html: ^2.2.4
+  flutter_localizations:
+    sdk: flutter
 
   # Navigation
   go_router: ^17.1.0
@@ -71,6 +73,7 @@ dependencies:
 
   # Google Fonts
   google_fonts: ^6.2.1
+  flutter_gen: ^5.14.1
 
 dev_dependencies:
   flutter_test:
@@ -86,6 +89,7 @@ flutter_launcher_icons:
     generate: true
 
 flutter:
+  generate: true
   uses-material-design: true
 
   assets:

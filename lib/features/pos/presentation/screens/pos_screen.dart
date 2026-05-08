@@ -11,6 +11,7 @@ import 'package:my_pos/features/products/domain/models/product.dart';
 import 'package:my_pos/features/pos/presentation/widgets/barcode_listener.dart';
 import 'package:my_pos/features/pos/presentation/widgets/checkout_dialog.dart';
 import 'package:my_pos/features/pos/presentation/widgets/scanner_dialog.dart';
+import 'package:my_pos/l10n/app_localizations.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -31,11 +32,12 @@ class _PosScreenState extends State<PosScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isTablet = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Point of Sale'),
+        title: Text(l10n.pos),
         actions: [
           if (!isTablet)
             BlocBuilder<CartBloc, CartState>(
@@ -84,7 +86,7 @@ class _PosScreenState extends State<PosScreen> {
             // ─── Product Section ───
             Expanded(
               flex: 3,
-              child: _buildProductSection(),
+              child: _buildProductSection(l10n),
             ),
 
             // ─── Cart Sidebar (Tablet Only) ───
@@ -100,7 +102,7 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  Widget _buildProductSection() {
+  Widget _buildProductSection(AppLocalizations l10n) {
     return Column(
       children: [
         Padding(
@@ -112,7 +114,7 @@ class _PosScreenState extends State<PosScreen> {
                   Expanded(
                     child: PosSearchBar(
                       controller: _searchController,
-                      hintText: 'Search products or scan barcode...',
+                      hintText: l10n.searchProducts,
                       onChanged: (v) {
                         context
                             .read<ProductBloc>()
@@ -352,6 +354,8 @@ class _CartSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return BlocBuilder<CartBloc, CartState>(
       builder: (context, state) {
         return Column(
@@ -380,7 +384,7 @@ class _CartSidebar extends StatelessWidget {
             ),
             Expanded(
               child: state.items.isEmpty
-                  ? _buildEmptyCart()
+                  ? _buildEmptyCart(l10n)
                   : ListView.separated(
                       padding:
                           const EdgeInsets.symmetric(horizontal: AppSizes.lg),
@@ -392,24 +396,24 @@ class _CartSidebar extends StatelessWidget {
                       },
                     ),
             ),
-            _buildCartSummary(context, state),
+            _buildCartSummary(context, state, l10n),
           ],
         );
       },
     );
   }
 
-  Widget _buildEmptyCart() {
-    return const Center(
+  Widget _buildEmptyCart(AppLocalizations l10n) {
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.shopping_cart_outlined,
+          const Icon(Icons.shopping_cart_outlined,
               size: 64, color: AppColors.mediumGray),
-          SizedBox(height: AppSizes.md),
+          const SizedBox(height: AppSizes.md),
           Text(
-            'Your cart is empty',
-            style: TextStyle(
+            l10n.emptyCart,
+            style: const TextStyle(
                 color: AppColors.mediumGray, fontWeight: FontWeight.w500),
           ),
         ],
@@ -417,7 +421,8 @@ class _CartSidebar extends StatelessWidget {
     );
   }
 
-  Widget _buildCartSummary(BuildContext context, CartState state) {
+  Widget _buildCartSummary(
+      BuildContext context, CartState state, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(AppSizes.lg),
       decoration: BoxDecoration(
@@ -432,11 +437,12 @@ class _CartSidebar extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _SummaryRow(label: 'Subtotal', value: state.totalAmount.toCurrency()),
-          const _SummaryRow(label: 'Tax (0%)', value: 'Rp 0'),
+          _SummaryRow(
+              label: l10n.subtotal, value: state.totalAmount.toCurrency()),
+          _SummaryRow(label: '${l10n.tax} (0%)', value: 'Rp 0'),
           const Divider(height: 24),
           _SummaryRow(
-            label: 'Total',
+            label: l10n.total,
             value: state.totalAmount.toCurrency(),
             isTotal: true,
           ),
@@ -455,9 +461,10 @@ class _CartSidebar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                 ),
               ),
-              child: const Text(
-                'Checkout',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              child: Text(
+                l10n.checkout,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
           ),

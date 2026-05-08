@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_pos/core/constants/app_colors.dart';
 import 'package:my_pos/core/constants/app_sizes.dart';
+import 'package:my_pos/core/bloc/locale_bloc.dart';
 import 'package:my_pos/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:my_pos/l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -23,32 +25,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  void _showLogoutDialog() {
+  void _showLogoutDialog(AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout'),
+        title: Text(l10n.logout),
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
               context.read<AuthBloc>().add(AuthLogoutRequested());
               Navigator.pop(context);
             },
-            child:
-                const Text('Logout', style: TextStyle(color: AppColors.error)),
+            child: Text(l10n.logout,
+                style: const TextStyle(color: AppColors.error)),
           ),
         ],
       ),
     );
   }
 
+  void _showLanguageDialog(AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.language),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('English'),
+              leading: const Text('🇺🇸'),
+              onTap: () {
+                context
+                    .read<LocaleBloc>()
+                    .add(LocaleChanged(const Locale('en')));
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('Bahasa Indonesia'),
+              leading: const Text('🇮🇩'),
+              onTap: () {
+                context
+                    .read<LocaleBloc>()
+                    .add(LocaleChanged(const Locale('id')));
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is! AuthAuthenticated) return const SizedBox.shrink();
@@ -61,10 +99,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Settings'),
+            title: Text(l10n.settings),
             actions: [
               IconButton(
-                onPressed: _showLogoutDialog,
+                onPressed: () => _showLogoutDialog(l10n),
                 icon: const Icon(Icons.logout_rounded, color: AppColors.error),
               ),
               const SizedBox(width: AppSizes.sm),
@@ -81,7 +119,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       radius: 50,
                       backgroundColor: AppColors.primarySurface,
                       child: Text(
-                        user.fullName.substring(0, 1).toUpperCase(),
+                        user.fullName.isNotEmpty
+                            ? user.fullName.substring(0, 1).toUpperCase()
+                            : '?',
                         style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -99,7 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     Text(
                       user.email,
-                      style: TextStyle(color: AppColors.mediumGray),
+                      style: const TextStyle(color: AppColors.mediumGray),
                     ),
                     const SizedBox(height: AppSizes.md),
                     Chip(
@@ -116,29 +156,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: AppSizes.huge),
 
-              // Settings Sections
+              // Profile Section
               _buildSectionTitle('Profile Information'),
               _buildSettingItem(
                 icon: Icons.person_outline_rounded,
                 title: 'Full Name',
                 subtitle: user.fullName,
-                onTap: () => _showEditProfileDialog(user.fullName),
+                onTap: () => _showEditProfileDialog(user.fullName, l10n),
               ),
               _buildSettingItem(
                 icon: Icons.dialpad_rounded,
                 title: 'Cashier PIN',
                 subtitle: user.pin == null ? 'Not set' : '****',
-                onTap: _showEditPinDialog,
+                onTap: () => _showEditPinDialog(l10n),
               ),
 
               const SizedBox(height: AppSizes.xl),
-              _buildSectionTitle('Store Settings (Coming in Phase 10)'),
+              // App Settings Section
+              _buildSectionTitle('App Preferences'),
               _buildSettingItem(
-                icon: Icons.store_rounded,
-                title: 'Store Info',
-                subtitle: 'Name, Address, Tax settings',
+                icon: Icons.language_rounded,
+                title: l10n.language,
+                subtitle: Localizations.localeOf(context).languageCode == 'en'
+                    ? 'English'
+                    : 'Bahasa Indonesia',
+                onTap: () => _showLanguageDialog(l10n),
+              ),
+              _buildSettingItem(
+                icon: Icons.dark_mode_outlined,
+                title: l10n.darkMode,
+                subtitle: 'Off',
                 onTap: null,
               ),
+
+              const SizedBox(height: AppSizes.xl),
+              _buildSectionTitle('Store Configuration'),
               _buildSettingItem(
                 icon: Icons.print_rounded,
                 title: 'Printer Setup',
@@ -173,18 +225,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String subtitle,
     VoidCallback? onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       margin: const EdgeInsets.only(bottom: AppSizes.sm),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        side: BorderSide(color: AppColors.lightGray.withValues(alpha: 0.5)),
+        side: BorderSide(
+            color: isDark
+                ? AppColors.darkBorder
+                : AppColors.lightGray.withValues(alpha: 0.5)),
       ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppColors.extraLightGray,
+            color: isDark ? AppColors.darkBorder : AppColors.extraLightGray,
             borderRadius: BorderRadius.circular(AppSizes.radiusSm),
           ),
           child: Icon(icon, color: AppColors.primary, size: 20),
@@ -198,7 +254,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showEditProfileDialog(String currentName) {
+  void _showEditProfileDialog(String currentName, AppLocalizations l10n) {
     _nameController.text = currentName;
     showDialog(
       context: context,
@@ -211,7 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(l10n.cancel)),
           ElevatedButton(
             onPressed: () {
               context.read<AuthBloc>().add(
@@ -220,14 +276,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   );
               Navigator.pop(context);
             },
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
     );
   }
 
-  void _showEditPinDialog() {
+  void _showEditPinDialog(AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -241,7 +297,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(l10n.cancel)),
           ElevatedButton(
             onPressed: () {
               context.read<AuthBloc>().add(
@@ -249,7 +305,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   );
               Navigator.pop(context);
             },
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
