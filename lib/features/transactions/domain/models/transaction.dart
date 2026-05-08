@@ -35,25 +35,27 @@ class Transaction extends Equatable {
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
-      id: json['id'] as String,
-      transactionNumber: json['transaction_number'] as String,
-      subtotal: (json['subtotal'] as num).toDouble(),
+      id: (json['id'] ?? '').toString(),
+      transactionNumber: (json['transaction_number'] ?? 'N/A').toString(),
+      subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
       discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0,
       taxAmount: (json['tax_amount'] as num?)?.toDouble() ?? 0,
-      total: (json['total'] as num).toDouble(),
-      paymentMethod: json['payment_method'] as String,
-      paymentStatus: json['payment_status'] as String? ?? 'completed',
-      cashierId: json['cashier_id'] as String?,
+      total: (json['total'] as num?)?.toDouble() ?? 0,
+      paymentMethod: (json['payment_method'] ?? 'cash').toString(),
+      paymentStatus: (json['payment_status'] ?? 'completed').toString(),
+      cashierId: json['cashier_id']?.toString(),
       cashierName: json['profiles'] != null
-          ? (json['profiles'] as Map<String, dynamic>)['full_name'] as String?
-          : json['cashier_name'] as String?,
-      notes: json['notes'] as String?,
+          ? (json['profiles'] as Map<String, dynamic>)['full_name']?.toString()
+          : json['cashier_name']?.toString(),
+      notes: json['notes']?.toString(),
       items: json['transaction_items'] != null
           ? (json['transaction_items'] as List)
               .map((e) => TransactionItem.fromJson(e as Map<String, dynamic>))
               .toList()
           : [],
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'].toString())
+          : DateTime.now(),
     );
   }
 
@@ -73,8 +75,15 @@ class Transaction extends Equatable {
 
   @override
   List<Object?> get props => [
-        id, transactionNumber, subtotal, discountAmount,
-        taxAmount, total, paymentMethod, paymentStatus, createdAt,
+        id,
+        transactionNumber,
+        subtotal,
+        discountAmount,
+        taxAmount,
+        total,
+        paymentMethod,
+        paymentStatus,
+        createdAt,
       ];
 }
 
@@ -101,14 +110,16 @@ class TransactionItem extends Equatable {
 
   factory TransactionItem.fromJson(Map<String, dynamic> json) {
     return TransactionItem(
-      id: json['id'] as String,
-      transactionId: json['transaction_id'] as String,
-      productId: json['product_id'] as String,
-      productName: json['product_name'] as String,
-      quantity: json['quantity'] as int,
-      unitPrice: (json['unit_price'] as num).toDouble(),
-      subtotal: (json['subtotal'] as num).toDouble(),
-      createdAt: DateTime.parse(json['created_at'] as String),
+      id: (json['id'] ?? '').toString(),
+      transactionId: (json['transaction_id'] ?? '').toString(),
+      productId: (json['product_id'] ?? '').toString(),
+      productName: (json['product_name'] ?? 'Unknown').toString(),
+      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+      unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0,
+      subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'].toString())
+          : DateTime.now(),
     );
   }
 
@@ -124,5 +135,6 @@ class TransactionItem extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, transactionId, productId, quantity, unitPrice];
+  List<Object?> get props =>
+      [id, transactionId, productId, quantity, unitPrice];
 }

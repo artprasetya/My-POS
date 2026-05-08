@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:my_pos/core/constants/app_colors.dart';
 import 'package:my_pos/core/constants/app_sizes.dart';
+import 'package:my_pos/core/extensions/number_extensions.dart';
 import 'package:my_pos/core/widgets/pos_card.dart';
 import 'package:my_pos/core/widgets/pos_loading_indicator.dart';
+import 'package:my_pos/features/transactions/domain/models/transaction.dart';
 import 'package:my_pos/features/transactions/presentation/bloc/transaction_bloc.dart';
 
 class TransactionDetailScreen extends StatefulWidget {
@@ -88,7 +90,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     );
   }
 
-  Widget _buildHeader(dynamic txn) {
+  Widget _buildHeader(Transaction txn) {
     return PosCard(
       child: Column(
         children: [
@@ -125,7 +127,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     );
   }
 
-  Widget _buildItemList(dynamic txn) {
+  Widget _buildItemList(Transaction txn) {
     return PosCard(
       padding: EdgeInsets.zero,
       child: Column(
@@ -152,7 +154,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                     style: const TextStyle(fontWeight: FontWeight.w500)),
                 subtitle:
                     Text('${item.quantity} x ${item.unitPrice.toCurrency()}'),
-                trailing: Text(item.total.toCurrency(),
+                trailing: Text(item.subtotal.toCurrency(),
                     style: const TextStyle(fontWeight: FontWeight.bold)),
               );
             },
@@ -162,7 +164,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     );
   }
 
-  Widget _buildSummary(dynamic txn) {
+  Widget _buildSummary(Transaction txn) {
     return PosCard(
       child: Column(
         children: [
