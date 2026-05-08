@@ -30,7 +30,9 @@ class UserProfile extends Equatable {
       role: json['role'] as String? ?? 'cashier',
       pin: json['pin'] as String?,
       avatarUrl: json['avatar_url'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
     );
   }
 

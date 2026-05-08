@@ -24,7 +24,11 @@ class InventoryRepository {
     final productData = await SupabaseService.table('products')
         .select('stock')
         .eq('id', productId)
-        .single();
+        .maybeSingle();
+    
+    if (productData == null) {
+      throw Exception('Product not found');
+    }
     
     final currentStock = productData['stock'] as int;
     final newStock = type == 'in' ? currentStock + quantity : currentStock - quantity;

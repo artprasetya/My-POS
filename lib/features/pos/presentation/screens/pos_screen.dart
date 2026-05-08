@@ -8,8 +8,9 @@ import 'package:my_pos/features/pos/presentation/bloc/cart_bloc.dart';
 import 'package:my_pos/features/products/presentation/bloc/product_bloc.dart';
 import 'package:my_pos/core/widgets/pos_search_bar.dart';
 import 'package:my_pos/features/products/domain/models/product.dart';
+import 'package:my_pos/features/pos/presentation/widgets/barcode_listener.dart';
 import 'package:my_pos/features/pos/presentation/widgets/checkout_dialog.dart';
-// import 'package:my_pos/routing/shell_scaffold.dart'; // Unused
+import 'package:my_pos/features/pos/presentation/widgets/scanner_dialog.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -77,22 +78,24 @@ class _PosScreenState extends State<PosScreen> {
             ),
         ],
       ),
-      body: Row(
-        children: [
-          // ─── Product Section ───
-          Expanded(
-            flex: 3,
-            child: _buildProductSection(),
-          ),
-
-          // ─── Cart Sidebar (Tablet Only) ───
-          if (isTablet) const VerticalDivider(width: 1),
-          if (isTablet)
-            const SizedBox(
-              width: 350,
-              child: _CartSidebar(),
+      body: BarcodeListener(
+        child: Row(
+          children: [
+            // ─── Product Section ───
+            Expanded(
+              flex: 3,
+              child: _buildProductSection(),
             ),
-        ],
+
+            // ─── Cart Sidebar (Tablet Only) ───
+            if (isTablet) const VerticalDivider(width: 1),
+            if (isTablet)
+              const SizedBox(
+                width: 350,
+                child: _CartSidebar(),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -104,15 +107,34 @@ class _PosScreenState extends State<PosScreen> {
           padding: const EdgeInsets.all(AppSizes.lg),
           child: Column(
             children: [
-              PosSearchBar(
-                controller: _searchController,
-                hintText: 'Search products or scan barcode...',
-                onChanged: (v) {
-                  context.read<ProductBloc>().add(ProductLoadProductsRequested(
-                        search: v,
-                        categoryId: _selectedCategoryId,
-                      ));
-                },
+              Row(
+                children: [
+                  Expanded(
+                    child: PosSearchBar(
+                      controller: _searchController,
+                      hintText: 'Search products or scan barcode...',
+                      onChanged: (v) {
+                        context
+                            .read<ProductBloc>()
+                            .add(ProductLoadProductsRequested(
+                              search: v,
+                              categoryId: _selectedCategoryId,
+                            ));
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: AppSizes.md),
+                  IconButton.filled(
+                    onPressed: () => _showScanner(context),
+                    icon: const Icon(Icons.qr_code_scanner_rounded),
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSizes.md),
               _buildCategoryFilters(),
@@ -130,6 +152,13 @@ class _PosScreenState extends State<PosScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showScanner(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const ScannerDialog(),
     );
   }
 

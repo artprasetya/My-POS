@@ -25,6 +25,15 @@ class CartItemRemoved extends CartEvent {
   List<Object?> get props => [productId];
 }
 
+class CartBarcodeScanned extends CartEvent {
+  final String barcode;
+  final List<Product> availableProducts;
+  CartBarcodeScanned(this.barcode, this.availableProducts);
+
+  @override
+  List<Object?> get props => [barcode, availableProducts];
+}
+
 class CartUpdateQuantity extends CartEvent {
   final String productId;
   final int quantity;
@@ -98,6 +107,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     on<CartUpdateQuantity>(_onUpdateQuantity);
     on<CartUpdateDiscount>(_onUpdateDiscount);
     on<CartSetGlobalDiscount>(_onSetGlobalDiscount);
+    on<CartBarcodeScanned>(_onBarcodeScanned);
     on<CartCleared>(_onClear);
   }
 
@@ -161,6 +171,17 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   void _onSetGlobalDiscount(
       CartSetGlobalDiscount event, Emitter<CartState> emit) {
     emit(state.copyWith(globalDiscount: event.discount));
+  }
+
+  void _onBarcodeScanned(CartBarcodeScanned event, Emitter<CartState> emit) {
+    try {
+      final product = event.availableProducts.firstWhere(
+        (p) => p.barcode == event.barcode,
+      );
+      add(CartItemAdded(product));
+    } catch (_) {
+      // Product not found
+    }
   }
 
   void _onClear(CartCleared event, Emitter<CartState> emit) {

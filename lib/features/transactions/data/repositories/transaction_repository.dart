@@ -20,25 +20,34 @@ class TransactionRepository {
     final cashierId = SupabaseService.currentUser?.id;
 
     // Insert transaction
-    final txnData = await SupabaseService.table('transactions').insert({
-      'transaction_number': transactionNumber,
-      'subtotal': subtotal,
-      'discount_amount': discountAmount,
-      'tax_amount': taxAmount,
-      'total': total,
-      'payment_method': paymentMethod,
-      'payment_status': 'completed',
-      'cashier_id': cashierId,
-      'notes': notes,
-    }).select().single();
+    final txnData = await SupabaseService.table('transactions')
+        .insert({
+          'transaction_number': transactionNumber,
+          'subtotal': subtotal,
+          'discount_amount': discountAmount,
+          'tax_amount': taxAmount,
+          'total': total,
+          'payment_method': paymentMethod,
+          'payment_status': 'completed',
+          'cashier_id': cashierId,
+          'notes': notes,
+        })
+        .select()
+        .maybeSingle();
+
+    if (txnData == null) {
+      throw Exception('Failed to create transaction record');
+    }
 
     final transactionId = txnData['id'] as String;
 
     // Insert transaction items
-    final itemsData = items.map((item) => {
-          ...item.toJson(),
-          'transaction_id': transactionId,
-        }).toList();
+    final itemsData = items
+        .map((item) => {
+              ...item.toJson(),
+              'transaction_id': transactionId,
+            })
+        .toList();
 
     await SupabaseService.table('transaction_items').insert(itemsData);
 
@@ -52,11 +61,12 @@ class TransactionRepository {
         final product = await SupabaseService.table('products')
             .select('stock')
             .eq('id', item.productId)
-            .single();
+            .maybeSingle();
+        
+        if (product == null) return;
         final currentStock = product['stock'] as int;
-        await SupabaseService.table('products')
-            .update({'stock': currentStock - item.quantity})
-            .eq('id', item.productId);
+        await SupabaseService.table('products').update(
+            {'stock': currentStock - item.quantity}).eq('id', item.productId);
       });
     }
 
@@ -83,8 +93,8 @@ class TransactionRepository {
     String? search,
     int limit = 50,
   }) async {
-    var query = SupabaseService.table('transactions')
-        .select('*, transaction_items(*)');
+    var query =
+        SupabaseService.table('transactions').select('*, transaction_items(*)');
 
     if (startDate != null) {
       query = query.gte('created_at', startDate.toIso8601String());
@@ -96,9 +106,7 @@ class TransactionRepository {
       query = query.ilike('transaction_number', '%$search%');
     }
 
-    final data = await query
-        .order('created_at', ascending: false)
-        .limit(limit);
+    final data = await query.order('created_at', ascending: false).limit(limit);
 
     return (data as List).map((e) => Transaction.fromJson(e)).toList();
   }
@@ -108,7 +116,11 @@ class TransactionRepository {
     final data = await SupabaseService.table('transactions')
         .select('*, transaction_items(*)')
         .eq('id', id)
-        .single();
+        .maybeSingle();
+
+    if (data == null) {
+      throw Exception('Transaction not found');
+    }
     return Transaction.fromJson(data);
   }
 
@@ -168,7 +180,8 @@ class TransactionRepository {
   }
 
   // ─── Best Selling Products ───
-  Future<List<Map<String, dynamic>>> getBestSellingProducts({int limit = 5}) async {
+  Future<List<Map<String, dynamic>>> getBestSellingProducts(
+      {int limit = 5}) async {
     final data = await SupabaseService.table('transaction_items')
         .select('product_id, product_name, quantity')
         .order('created_at', ascending: false)
@@ -213,13 +226,15 @@ class TransactionRepository {
     final Map<String, double> dailyMap = {};
     for (int i = 0; i < days; i++) {
       final date = startDate.add(Duration(days: i));
-      final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final key =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       dailyMap[key] = 0;
     }
 
     for (final item in data as List) {
       final date = DateTime.parse(item['created_at'] as String);
-      final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final key =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       dailyMap[key] = (dailyMap[key] ?? 0) + (item['total'] as num).toDouble();
     }
 

@@ -12,8 +12,7 @@ class ProductRepository {
     String? search,
     bool? activeOnly,
   }) async {
-    var query = SupabaseService.table('products')
-        .select('*, categories(name)');
+    var query = SupabaseService.table('products').select('*, categories(name)');
 
     if (categoryId != null) {
       query = query.eq('category_id', categoryId);
@@ -34,7 +33,9 @@ class ProductRepository {
       final data = await SupabaseService.table('products')
           .select('*, categories(name)')
           .eq('barcode', barcode)
-          .single();
+          .maybeSingle();
+      
+      if (data == null) return null;
       return Product.fromJson(data);
     } catch (_) {
       return null;
@@ -45,7 +46,11 @@ class ProductRepository {
     final data = await SupabaseService.table('products')
         .select('*, categories(name)')
         .eq('id', id)
-        .single();
+        .maybeSingle();
+
+    if (data == null) {
+      throw Exception('Product not found');
+    }
     return Product.fromJson(data);
   }
 
@@ -53,7 +58,11 @@ class ProductRepository {
     final data = await SupabaseService.table('products')
         .insert(product.toJson())
         .select('*, categories(name)')
-        .single();
+        .maybeSingle();
+
+    if (data == null) {
+      throw Exception('Failed to create product');
+    }
     return Product.fromJson(data);
   }
 
@@ -62,7 +71,11 @@ class ProductRepository {
         .update(product.toJson())
         .eq('id', product.id)
         .select('*, categories(name)')
-        .single();
+        .maybeSingle();
+
+    if (data == null) {
+      throw Exception('Product not found or update failed');
+    }
     return Product.fromJson(data);
   }
 
@@ -72,8 +85,7 @@ class ProductRepository {
 
   Future<void> updateStock(String productId, int newStock) async {
     await SupabaseService.table('products')
-        .update({'stock': newStock})
-        .eq('id', productId);
+        .update({'stock': newStock}).eq('id', productId);
   }
 
   // ─── Product Image ───
@@ -101,7 +113,11 @@ class ProductRepository {
     final data = await SupabaseService.table('categories')
         .insert(category.toJson())
         .select()
-        .single();
+        .maybeSingle();
+
+    if (data == null) {
+      throw Exception('Failed to create category');
+    }
     return Category.fromJson(data);
   }
 
@@ -110,7 +126,11 @@ class ProductRepository {
         .update(category.toJson())
         .eq('id', category.id)
         .select()
-        .single();
+        .maybeSingle();
+
+    if (data == null) {
+      throw Exception('Category not found');
+    }
     return Category.fromJson(data);
   }
 
