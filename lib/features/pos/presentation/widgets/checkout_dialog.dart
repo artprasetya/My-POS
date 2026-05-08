@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:my_pos/core/constants/app_colors.dart';
 import 'package:my_pos/core/constants/app_sizes.dart';
 import 'package:my_pos/core/extensions/number_extensions.dart';
+import 'package:my_pos/core/utils/receipt_service.dart';
 import 'package:my_pos/features/pos/presentation/bloc/cart_bloc.dart';
+import 'package:my_pos/features/transactions/domain/models/transaction.dart' as model;
 import 'package:my_pos/features/transactions/presentation/bloc/transaction_bloc.dart';
 
 class CheckoutDialog extends StatefulWidget {
@@ -307,9 +309,7 @@ class ReceiptDialog extends StatelessWidget {
                 const SizedBox(width: AppSizes.md),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Print functionality placeholder
-                    },
+                    onPressed: () => ReceiptService.generateAndPrint(transaction as model.Transaction),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,

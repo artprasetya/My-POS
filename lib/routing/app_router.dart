@@ -11,6 +11,7 @@ import 'package:my_pos/features/pos/presentation/screens/pos_screen.dart';
 import 'package:my_pos/features/transactions/presentation/screens/transaction_list_screen.dart';
 import 'package:my_pos/features/transactions/presentation/screens/transaction_detail_screen.dart';
 import 'package:my_pos/features/inventory/presentation/screens/inventory_screen.dart';
+import 'package:my_pos/features/reports/presentation/screens/reports_screen.dart';
 import 'package:my_pos/features/settings/presentation/screens/settings_screen.dart';
 import 'package:my_pos/routing/shell_scaffold.dart';
 import 'package:my_pos/routing/go_router_refresh_stream.dart';
@@ -90,16 +91,22 @@ class AppRouter {
             ],
           ),
           GoRoute(
-            path: '/transactions',
+            path: '/reports',
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: TransactionListScreen(),
+              child: ReportsScreen(),
             ),
             routes: [
               GoRoute(
-                path: ':id',
-                builder: (context, state) => TransactionDetailScreen(
-                  transactionId: state.pathParameters['id']!,
-                ),
+                path: 'history',
+                builder: (context, state) => const TransactionListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => TransactionDetailScreen(
+                      transactionId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

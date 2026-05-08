@@ -15,7 +15,7 @@ class ShellScaffold extends StatelessWidget {
     _Tab(label: 'POS', icon: Icons.point_of_sale_outlined, activeIcon: Icons.point_of_sale_rounded, path: '/pos'),
     _Tab(label: 'Products', icon: Icons.inventory_2_outlined, activeIcon: Icons.inventory_2_rounded, path: '/products'),
     _Tab(label: 'Inventory', icon: Icons.list_alt_outlined, activeIcon: Icons.list_alt_rounded, path: '/inventory'),
-    _Tab(label: 'History', icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long_rounded, path: '/transactions'),
+    _Tab(label: 'Reports', icon: Icons.bar_chart_outlined, activeIcon: Icons.bar_chart_rounded, path: '/reports'),
     _Tab(label: 'Settings', icon: Icons.settings_outlined, activeIcon: Icons.settings_rounded, path: '/settings'),
   ];
 

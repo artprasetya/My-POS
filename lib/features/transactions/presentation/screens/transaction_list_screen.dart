@@ -207,7 +207,7 @@ class _TransactionCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return InkWell(
-      onTap: () => context.push('/transactions/${transaction.id}'),
+      onTap: () => context.push('/reports/history/${transaction.id}'),
       borderRadius: BorderRadius.circular(AppSizes.radiusLg),
       child: Container(
         padding: const EdgeInsets.all(AppSizes.lg),
