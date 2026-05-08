@@ -10,6 +10,7 @@ import 'package:my_pos/features/products/presentation/screens/add_edit_product_s
 import 'package:my_pos/features/pos/presentation/screens/pos_screen.dart';
 import 'package:my_pos/features/transactions/presentation/screens/transaction_list_screen.dart';
 import 'package:my_pos/features/transactions/presentation/screens/transaction_detail_screen.dart';
+import 'package:my_pos/features/inventory/presentation/screens/inventory_screen.dart';
 import 'package:my_pos/features/settings/presentation/screens/settings_screen.dart';
 import 'package:my_pos/routing/shell_scaffold.dart';
 import 'package:my_pos/routing/go_router_refresh_stream.dart';
@@ -101,6 +102,12 @@ class AppRouter {
                 ),
               ),
             ],
+          ),
+          GoRoute(
+            path: '/inventory',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: InventoryScreen(),
+            ),
           ),
           GoRoute(
             path: '/settings',

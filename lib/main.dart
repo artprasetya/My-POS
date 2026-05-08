@@ -9,6 +9,8 @@ import 'package:my_pos/features/dashboard/presentation/bloc/dashboard_bloc.dart'
 import 'package:my_pos/features/pos/presentation/bloc/cart_bloc.dart';
 import 'package:my_pos/features/products/data/repositories/product_repository.dart';
 import 'package:my_pos/features/products/presentation/bloc/product_bloc.dart';
+import 'package:my_pos/features/inventory/data/repositories/inventory_repository.dart';
+import 'package:my_pos/features/inventory/presentation/bloc/inventory_bloc.dart';
 import 'package:my_pos/features/transactions/data/repositories/transaction_repository.dart';
 import 'package:my_pos/features/transactions/presentation/bloc/transaction_bloc.dart';
 import 'package:my_pos/routing/app_router.dart';
@@ -38,12 +40,14 @@ class MyPosApp extends StatelessWidget {
     final authRepository = AuthRepository();
     final productRepository = ProductRepository();
     final transactionRepository = TransactionRepository();
+    final inventoryRepository = InventoryRepository();
 
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider.value(value: authRepository),
         RepositoryProvider.value(value: productRepository),
         RepositoryProvider.value(value: transactionRepository),
+        RepositoryProvider.value(value: inventoryRepository),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -58,6 +62,9 @@ class MyPosApp extends StatelessWidget {
           ),
           BlocProvider(
             create: (_) => DashboardBloc(repository: transactionRepository),
+          ),
+          BlocProvider(
+            create: (_) => InventoryBloc(repository: inventoryRepository),
           ),
         ],
         child: Builder(
