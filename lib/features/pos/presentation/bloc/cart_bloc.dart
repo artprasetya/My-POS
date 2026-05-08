@@ -9,17 +9,17 @@ abstract class CartEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class CartAddItem extends CartEvent {
+class CartItemAdded extends CartEvent {
   final Product product;
-  CartAddItem(this.product);
+  CartItemAdded(this.product);
 
   @override
   List<Object?> get props => [product];
 }
 
-class CartRemoveItem extends CartEvent {
+class CartItemRemoved extends CartEvent {
   final String productId;
-  CartRemoveItem(this.productId);
+  CartItemRemoved(this.productId);
 
   @override
   List<Object?> get props => [productId];
@@ -51,7 +51,7 @@ class CartSetGlobalDiscount extends CartEvent {
   List<Object?> get props => [discount];
 }
 
-class CartClear extends CartEvent {}
+class CartCleared extends CartEvent {}
 
 // ─── State ───
 class CartState extends Equatable {
@@ -70,6 +70,7 @@ class CartState extends Equatable {
   double get afterDiscount => subtotal - globalDiscountAmount;
   double get taxAmount => afterDiscount * taxRate;
   double get total => afterDiscount + taxAmount;
+  double get totalAmount => total; // Alias for UI consistency
   int get totalItems => items.fold(0, (sum, item) => sum + item.quantity);
   bool get isEmpty => items.isEmpty;
 
@@ -92,15 +93,15 @@ class CartState extends Equatable {
 // ─── Bloc ───
 class CartBloc extends Bloc<CartEvent, CartState> {
   CartBloc() : super(const CartState()) {
-    on<CartAddItem>(_onAddItem);
-    on<CartRemoveItem>(_onRemoveItem);
+    on<CartItemAdded>(_onAddItem);
+    on<CartItemRemoved>(_onRemoveItem);
     on<CartUpdateQuantity>(_onUpdateQuantity);
     on<CartUpdateDiscount>(_onUpdateDiscount);
     on<CartSetGlobalDiscount>(_onSetGlobalDiscount);
-    on<CartClear>(_onClear);
+    on<CartCleared>(_onClear);
   }
 
-  void _onAddItem(CartAddItem event, Emitter<CartState> emit) {
+  void _onAddItem(CartItemAdded event, Emitter<CartState> emit) {
     final items = List<CartItem>.from(state.items);
     final existingIndex =
         items.indexWhere((item) => item.productId == event.product.id);
@@ -123,7 +124,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     emit(state.copyWith(items: items));
   }
 
-  void _onRemoveItem(CartRemoveItem event, Emitter<CartState> emit) {
+  void _onRemoveItem(CartItemRemoved event, Emitter<CartState> emit) {
     final items = state.items
         .where((item) => item.productId != event.productId)
         .toList();
@@ -132,7 +133,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
   void _onUpdateQuantity(CartUpdateQuantity event, Emitter<CartState> emit) {
     if (event.quantity <= 0) {
-      add(CartRemoveItem(event.productId));
+      add(CartItemRemoved(event.productId));
       return;
     }
 
@@ -162,7 +163,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     emit(state.copyWith(globalDiscount: event.discount));
   }
 
-  void _onClear(CartClear event, Emitter<CartState> emit) {
+  void _onClear(CartCleared event, Emitter<CartState> emit) {
     emit(const CartState());
   }
 }
