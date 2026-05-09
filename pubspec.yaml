@@ -55,6 +55,7 @@ dependencies:
 
   # Excel export
   syncfusion_flutter_xlsio: ^28.2.7
+  
 
   # Path
   path_provider: ^2.1.4
@@ -64,6 +65,7 @@ dependencies:
 
   # Utilities
   flutter_dotenv: ^6.0.0
+  url_launcher: ^6.3.1
 
   # Icons
   iconsax: ^0.0.8
@@ -98,3 +100,4 @@ flutter:
     - assets/images/
     - .env.staging
     - .env.production
+

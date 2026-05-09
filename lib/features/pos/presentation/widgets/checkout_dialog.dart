@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:my_pos/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_pos/core/constants/app_colors.dart';
 import 'package:my_pos/core/constants/app_sizes.dart';
 import 'package:my_pos/core/extensions/number_extensions.dart';
@@ -8,7 +10,6 @@ import 'package:my_pos/features/pos/presentation/bloc/cart_bloc.dart';
 import 'package:my_pos/features/transactions/domain/models/transaction.dart'
     as model;
 import 'package:my_pos/features/transactions/presentation/bloc/transaction_bloc.dart';
-import 'package:my_pos/l10n/app_localizations.dart';
 
 class CheckoutDialog extends StatefulWidget {
   final CartState cartState;
@@ -65,6 +66,15 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
         if (state is TransactionCreateSuccess) {
           context.read<CartBloc>().add(CartCleared());
           Navigator.pop(context); // Close checkout dialog
+
+          // Handle Auto-Print
+          SharedPreferences.getInstance().then((prefs) {
+            final autoPrint = prefs.getBool('printer_auto_print') ?? false;
+            if (autoPrint) {
+              ReceiptService.generateAndPrint(state.transaction);
+            }
+          });
+
           _showReceiptDialog(context, state.transaction, l10n);
         } else if (state is TransactionError) {
           ScaffoldMessenger.of(context).showSnackBar(

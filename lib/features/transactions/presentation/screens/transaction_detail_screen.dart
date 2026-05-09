@@ -6,6 +6,7 @@ import 'package:my_pos/core/constants/app_sizes.dart';
 import 'package:my_pos/core/extensions/number_extensions.dart';
 import 'package:my_pos/core/widgets/pos_card.dart';
 import 'package:my_pos/core/widgets/pos_loading_indicator.dart';
+import 'package:my_pos/core/utils/receipt_service.dart';
 import 'package:my_pos/features/transactions/domain/models/transaction.dart';
 import 'package:my_pos/features/transactions/presentation/bloc/transaction_bloc.dart';
 
@@ -33,12 +34,18 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       appBar: AppBar(
         title: const Text('Transaction Detail'),
         actions: [
-          IconButton(
-            onPressed: () {
-              // Print placeholder
+          BlocBuilder<TransactionBloc, TransactionState>(
+            builder: (context, state) {
+              if (state is TransactionDetailLoaded) {
+                return IconButton(
+                  onPressed: () =>
+                      ReceiptService.generateAndPrint(state.transaction),
+                  icon: const Icon(Icons.print_rounded),
+                  tooltip: 'Print Receipt',
+                );
+              }
+              return const SizedBox.shrink();
             },
-            icon: const Icon(Icons.print_rounded),
-            tooltip: 'Print Receipt',
           ),
           const SizedBox(width: AppSizes.sm),
         ],
@@ -61,19 +68,40 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                   const SizedBox(height: AppSizes.xl),
                   _buildSummary(txn),
                   const SizedBox(height: AppSizes.huge),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.share_rounded),
-                      label: const Text('Share Receipt'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primarySurface,
-                        foregroundColor: AppColors.primary,
-                        elevation: 0,
+                   Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: ElevatedButton.icon(
+                            onPressed: () => ReceiptService.shareReceipt(txn),
+                            icon: const Icon(Icons.share_rounded),
+                            label: const Text('Share PDF'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primarySurface,
+                              foregroundColor: AppColors.primary,
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: AppSizes.md),
+                      Expanded(
+                        child: SizedBox(
+                          height: 52,
+                          child: ElevatedButton.icon(
+                            onPressed: () => ReceiptService.sendToWhatsApp(txn),
+                            icon: const Icon(Icons.message_rounded),
+                            label: const Text('WhatsApp'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF25D366),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

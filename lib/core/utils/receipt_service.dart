@@ -3,6 +3,8 @@ import 'package:my_pos/features/transactions/domain/models/transaction.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ReceiptService {
   static final _currencyFormat = NumberFormat.currency(
@@ -11,12 +13,27 @@ class ReceiptService {
     decimalDigits: 0,
   );
 
-  static Future<void> generateAndPrint(Transaction transaction) async {
+  static Future<pw.Document> _generateDocument(Transaction transaction) async {
+    final prefs = await SharedPreferences.getInstance();
+    final paperSize = prefs.getString('printer_paper_size') ?? '80mm';
+
+    PdfPageFormat format;
+    switch (paperSize) {
+      case '58mm':
+        format = PdfPageFormat.roll57;
+        break;
+      case 'A4':
+        format = PdfPageFormat.a4;
+        break;
+      default:
+        format = PdfPageFormat.roll80;
+    }
+
     final pdf = pw.Document();
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.roll80, // Standard receipt width
+        pageFormat: format,
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -137,12 +154,55 @@ class ReceiptService {
         },
       ),
     );
+    return pdf;
+  }
 
-    // Direct print or preview
+  static Future<void> generateAndPrint(Transaction transaction) async {
+    final pdf = await _generateDocument(transaction);
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
       name: 'receipt_${transaction.transactionNumber}.pdf',
     );
+  }
+
+  static Future<void> shareReceipt(Transaction transaction) async {
+    final pdf = await _generateDocument(transaction);
+    await Printing.sharePdf(
+      bytes: await pdf.save(),
+      filename: 'receipt_${transaction.transactionNumber}.pdf',
+    );
+  }
+
+  static Future<void> sendToWhatsApp(Transaction transaction) async {
+    final date = DateFormat('dd/MM/yy HH:mm').format(transaction.createdAt);
+    final itemsBuffer = StringBuffer();
+
+    for (final item in transaction.items) {
+      itemsBuffer.writeln(
+          '• ${item.productName} (${item.quantity}x) - ${_currencyFormat.format(item.subtotal)}');
+    }
+
+    final message = '''
+*MY POS STORE - RECEIPT*
+--------------------------------
+Order: #${transaction.transactionNumber}
+Date: $date
+--------------------------------
+*Items:*
+${itemsBuffer.toString()}
+--------------------------------
+*TOTAL: ${_currencyFormat.format(transaction.total)}*
+Payment: ${transaction.paymentMethod.toUpperCase()}
+
+Thank you for shopping!
+''';
+
+    final encodedMessage = Uri.encodeComponent(message);
+    final url = 'https://wa.me/?text=$encodedMessage';
+
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    }
   }
 
   static pw.Widget _buildTotalRow(String label, String value) {

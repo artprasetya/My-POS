@@ -188,15 +188,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: 'Off',
                 onTap: null,
               ),
-
-              const SizedBox(height: AppSizes.xl),
-              _buildSectionTitle('Store Configuration'),
-              _buildSettingItem(
-                icon: Icons.print_rounded,
-                title: 'Printer Setup',
-                subtitle: 'Bluetooth or IP Printer',
-                onTap: null,
-              ),
             ],
           ),
         );
