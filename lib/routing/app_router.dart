@@ -30,7 +30,7 @@ class AppRouter {
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
     redirect: (context, state) {
       final authState = authBloc.state;
-      final isLoggingIn = state.matchedLocation == '/login';
+      final isLoggingIn = state.matchedLocation.startsWith('/login');
 
       if (authState is AuthInitial || authState is AuthLoading) {
         return null;

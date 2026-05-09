@@ -305,6 +305,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               .animate()
                               .fadeIn(delay: 800.ms, duration: 400.ms),
 
+                          /*
                           const SizedBox(height: AppSizes.xl),
                           // Divider
                           Row(
@@ -352,6 +353,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ).animate().fadeIn(delay: 1000.ms),
+                          */
                         ],
                       ),
                     ),

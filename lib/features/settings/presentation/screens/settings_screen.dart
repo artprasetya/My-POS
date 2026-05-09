@@ -164,12 +164,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: user.fullName,
                 onTap: () => _showEditProfileDialog(user.fullName, l10n),
               ),
+              /*
               _buildSettingItem(
                 icon: Icons.dialpad_rounded,
                 title: 'Cashier PIN',
                 subtitle: user.pin == null ? 'Not set' : '****',
                 onTap: () => _showEditPinDialog(l10n),
               ),
+              */
 
               const SizedBox(height: AppSizes.xl),
               // App Settings Section

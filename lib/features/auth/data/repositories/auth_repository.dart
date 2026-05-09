@@ -92,8 +92,7 @@ class AuthRepository {
       if (response == null) return null;
       return UserProfile.fromJson(response);
     } catch (e) {
-      throw Exception(
-          'PIN Login failed. Ensure "Allow PIN search" RLS policy is enabled. ($e)');
+      throw Exception('PIN Login failed. Please check your connection or try again later.');
     }
   }
 
