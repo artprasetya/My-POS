@@ -43,6 +43,18 @@ class CartUpdateQuantity extends CartEvent {
   List<Object?> get props => [productId, quantity];
 }
 
+class CartUpdatePriceTier extends CartEvent {
+  final String productId;
+  final String? priceName;
+  final double unitPrice;
+  final int multiplier;
+
+  CartUpdatePriceTier(this.productId, this.priceName, this.unitPrice, this.multiplier);
+
+  @override
+  List<Object?> get props => [productId, priceName, unitPrice, multiplier];
+}
+
 class CartUpdateDiscount extends CartEvent {
   final String productId;
   final double discount;
@@ -105,6 +117,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     on<CartItemAdded>(_onAddItem);
     on<CartItemRemoved>(_onRemoveItem);
     on<CartUpdateQuantity>(_onUpdateQuantity);
+    on<CartUpdatePriceTier>(_onUpdatePriceTier);
     on<CartUpdateDiscount>(_onUpdateDiscount);
     on<CartSetGlobalDiscount>(_onSetGlobalDiscount);
     on<CartBarcodeScanned>(_onBarcodeScanned);
@@ -154,6 +167,20 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       return item;
     }).toList();
 
+    emit(state.copyWith(items: items));
+  }
+
+  void _onUpdatePriceTier(CartUpdatePriceTier event, Emitter<CartState> emit) {
+    final items = state.items.map((item) {
+      if (item.productId == event.productId) {
+        return item.copyWith(
+          selectedPriceName: event.priceName,
+          unitPrice: event.unitPrice,
+          stockMultiplier: event.multiplier,
+        );
+      }
+      return item;
+    }).toList();
     emit(state.copyWith(items: items));
   }
 

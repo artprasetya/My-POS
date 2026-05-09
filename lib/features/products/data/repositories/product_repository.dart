@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:my_pos/features/products/domain/models/category.dart';
 import 'package:my_pos/features/products/domain/models/product.dart';
@@ -34,7 +35,7 @@ class ProductRepository {
           .select('*, categories(name)')
           .eq('barcode', barcode)
           .maybeSingle();
-      
+
       if (data == null) return null;
       return Product.fromJson(data);
     } catch (_) {
@@ -55,28 +56,43 @@ class ProductRepository {
   }
 
   Future<Product> createProduct(Product product) async {
-    final data = await SupabaseService.table('products')
+    final response = await SupabaseService.table('products')
         .insert(product.toJson())
-        .select('*, categories(name)')
-        .maybeSingle();
+        .select('*, categories(name)');
 
-    if (data == null) {
-      throw Exception('Failed to create product');
+    final data = response as List;
+    if (data.isEmpty) {
+      throw Exception('Failed to create product (0 rows returned)');
     }
-    return Product.fromJson(data);
+    return Product.fromJson(data.first);
   }
 
   Future<Product> updateProduct(Product product) async {
-    final data = await SupabaseService.table('products')
-        .update(product.toJson())
+    final payload = product.toJson();
+    final response = await SupabaseService.table('products')
+        .update(payload)
         .eq('id', product.id)
-        .select('*, categories(name)')
-        .maybeSingle();
+        .select();
 
-    if (data == null) {
-      throw Exception('Product not found or update failed');
+    final data = response as List;
+    if (data.isEmpty) {
+      debugPrint(
+          '===> Update failed (0 rows). ID: ${product.id}. Payload: $payload');
+      throw Exception(
+          'Update failed (0 rows). ID: ${product.id}. Payload: $payload');
     }
-    return Product.fromJson(data);
+    
+    // Fetch categories manually to keep it compatible
+    final catResponse = await SupabaseService.table('categories')
+        .select('name')
+        .eq('id', product.categoryId!)
+        .maybeSingle();
+        
+    if (catResponse != null) {
+      data.first['categories'] = {'name': catResponse['name']};
+    }
+
+    return Product.fromJson(data.first);
   }
 
   Future<void> deleteProduct(String id) async {

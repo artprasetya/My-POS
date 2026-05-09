@@ -53,9 +53,10 @@ class TransactionRepository {
 
     // Update product stock
     for (final item in items) {
+      final totalQuantityToDeduct = item.quantity * item.stockMultiplier;
       await SupabaseService.client.rpc('decrement_stock', params: {
         'p_product_id': item.productId,
-        'p_quantity': item.quantity,
+        'p_quantity': totalQuantityToDeduct,
       }).catchError((_) async {
         // Fallback: manual stock update
         final product = await SupabaseService.table('products')
@@ -66,17 +67,18 @@ class TransactionRepository {
         if (product == null) return;
         final currentStock = product['stock'] as int;
         await SupabaseService.table('products').update(
-            {'stock': currentStock - item.quantity}).eq('id', item.productId);
+            {'stock': currentStock - totalQuantityToDeduct}).eq('id', item.productId);
       });
     }
 
     // Log inventory
     for (final item in items) {
+      final totalQuantityToDeduct = item.quantity * item.stockMultiplier;
       await SupabaseService.table('inventory_logs').insert({
         'product_id': item.productId,
         'type': 'out',
-        'quantity': item.quantity,
-        'notes': 'Sale: $transactionNumber',
+        'quantity': totalQuantityToDeduct,
+        'notes': 'Sale: $transactionNumber${item.selectedPriceName != null ? " (${item.selectedPriceName})" : ""}',
       });
     }
 

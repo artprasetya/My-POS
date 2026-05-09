@@ -31,6 +31,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   String? _imageUrl;
   File? _imageFile;
   bool _isUploading = false;
+  final List<Map<String, TextEditingController>> _customPriceControllers = [];
 
   bool get _isEdit => widget.productId != null;
 
@@ -49,7 +50,27 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _selectedCategoryId = product.categoryId;
       _isActive = product.isActive;
       _imageUrl = product.imageUrl;
+
+      if (product.customPrices != null) {
+        for (final cp in product.customPrices!) {
+          _customPriceControllers.add({
+            'name': TextEditingController(text: cp.name),
+            'price': TextEditingController(text: cp.price.toInt().toString()),
+            'multiplier': TextEditingController(text: cp.multiplier.toString()),
+          });
+        }
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    for (final cp in _customPriceControllers) {
+      cp['name']!.dispose();
+      cp['price']!.dispose();
+      cp['multiplier']!.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _pickImage() async {
@@ -75,6 +96,17 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         // Actually, let's update ProductCreateRequested/ProductUpdateRequested to optionally take image bytes
       }
 
+      List<ProductPriceTier> customPrices = [];
+      for (final cp in _customPriceControllers) {
+        if (cp['name']!.text.trim().isNotEmpty && cp['price']!.text.isNotEmpty) {
+          customPrices.add(ProductPriceTier(
+            name: cp['name']!.text.trim(),
+            price: double.parse(cp['price']!.text),
+            multiplier: int.tryParse(cp['multiplier']!.text) ?? 1,
+          ));
+        }
+      }
+
       final product = Product(
         id: widget.productId ?? '',
         name: _nameController.text.trim(),
@@ -85,6 +117,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         categoryId: _selectedCategoryId,
         imageUrl: finalImageUrl,
         isActive: _isActive,
+        customPrices: customPrices.isNotEmpty ? customPrices : null,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -272,6 +305,105 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       value: _isActive,
                       onChanged: (v) => setState(() => _isActive = v),
                     ),
+                    const SizedBox(height: AppSizes.lg),
+
+                    // Custom Prices Section
+                    const Text(
+                      'Custom Prices (Optional)',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: AppSizes.sm),
+                    const Text(
+                      'Define special prices like "Grosir", "Dus", "Slop". The "Multiplier" is how many pieces this unit represents for stock reduction (e.g., 1 Dus = 24 pcs).',
+                      style: TextStyle(fontSize: 12, color: AppColors.gray),
+                    ),
+                    const SizedBox(height: AppSizes.md),
+                    ..._customPriceControllers.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final controllers = entry.value;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: AppSizes.md),
+                        padding: const EdgeInsets.all(AppSizes.md),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.lightGray),
+                          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: controllers['name'],
+                                    decoration: const InputDecoration(labelText: 'Unit Name (e.g., Dus)'),
+                                    validator: (v) =>
+                                        v == null || v.isEmpty ? 'Required' : null,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                                  onPressed: () {
+                                    setState(() {
+                                      _customPriceControllers.removeAt(index);
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSizes.sm),
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: TextFormField(
+                                    controller: controllers['price'],
+                                    decoration: const InputDecoration(
+                                      labelText: 'Price',
+                                      prefixText: 'Rp ',
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                    validator: (v) =>
+                                        v == null || v.isEmpty ? 'Required' : null,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSizes.md),
+                                Expanded(
+                                  flex: 1,
+                                  child: TextFormField(
+                                    controller: controllers['multiplier'],
+                                    decoration: const InputDecoration(labelText: 'Multiplier'),
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                    validator: (v) =>
+                                        v == null || v.isEmpty ? 'Required' : null,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _customPriceControllers.add({
+                            'name': TextEditingController(),
+                            'price': TextEditingController(),
+                            'multiplier': TextEditingController(text: '1'),
+                          });
+                        });
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Custom Price'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        minimumSize: const Size.fromHeight(40),
+                      ),
+                    ),
+
                     const SizedBox(height: AppSizes.huge),
 
                     SizedBox(

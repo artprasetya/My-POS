@@ -392,7 +392,15 @@ class _CartSidebar extends StatelessWidget {
                       separatorBuilder: (_, __) => const Divider(height: 24),
                       itemBuilder: (context, index) {
                         final item = state.items[index];
-                        return _CartItemTile(item: item);
+                        return BlocBuilder<ProductBloc, ProductState>(
+                          builder: (context, productState) {
+                            final product = productState.products.cast<Product?>().firstWhere(
+                                  (p) => p?.id == item.productId,
+                                  orElse: () => null,
+                                );
+                            return _CartItemTile(item: item, product: product);
+                          },
+                        );
                       },
                     ),
             ),
@@ -483,51 +491,98 @@ class _CartSidebar extends StatelessWidget {
 
 class _CartItemTile extends StatelessWidget {
   final CartItem item;
-  const _CartItemTile({required this.item});
+  final Product? product;
+  const _CartItemTile({required this.item, this.product});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.productName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text(
-                item.unitPrice.toCurrency(),
-                style:
-                    const TextStyle(color: AppColors.mediumGray, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
         Row(
           children: [
-            _QtyButton(
-              icon: Icons.remove,
-              onTap: () => context
-                  .read<CartBloc>()
-                  .add(CartUpdateQuantity(item.productId, item.quantity - 1)),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
-              child: Text(
-                '${item.quantity}',
-                style: const TextStyle(fontWeight: FontWeight.bold),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.productName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    item.unitPrice.toCurrency(),
+                    style:
+                        const TextStyle(color: AppColors.mediumGray, fontSize: 12),
+                  ),
+                ],
               ),
             ),
-            _QtyButton(
-              icon: Icons.add,
-              onTap: () => context
-                  .read<CartBloc>()
-                  .add(CartUpdateQuantity(item.productId, item.quantity + 1)),
+            Row(
+              children: [
+                _QtyButton(
+                  icon: Icons.remove,
+                  onTap: () => context
+                      .read<CartBloc>()
+                      .add(CartUpdateQuantity(item.productId, item.quantity - 1)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+                  child: Text(
+                    '${item.quantity}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                _QtyButton(
+                  icon: Icons.add,
+                  onTap: () => context
+                      .read<CartBloc>()
+                      .add(CartUpdateQuantity(item.productId, item.quantity + 1)),
+                ),
+              ],
             ),
           ],
         ),
+        if (product != null &&
+            product!.customPrices != null &&
+            product!.customPrices!.isNotEmpty) ...[
+          const SizedBox(height: AppSizes.xs),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              isExpanded: true,
+              isDense: true,
+              value: item.selectedPriceName,
+              hint: const Text('Harga Jual (Standard)', style: TextStyle(fontSize: 12)),
+              style: const TextStyle(fontSize: 12, color: AppColors.primary),
+              icon: const Icon(Icons.arrow_drop_down, size: 16),
+              items: [
+                DropdownMenuItem(
+                  value: null,
+                  child: Text('Harga Jual - ${product!.price.toCurrency()}',
+                      style: const TextStyle(fontSize: 12)),
+                ),
+                ...product!.customPrices!.map((tier) => DropdownMenuItem(
+                      value: tier.name,
+                      child: Text('${tier.name} - ${tier.price.toCurrency()}',
+                          style: const TextStyle(fontSize: 12)),
+                    )),
+              ],
+              onChanged: (val) {
+                if (val == null) {
+                  // Revert to standard price
+                  context.read<CartBloc>().add(
+                        CartUpdatePriceTier(item.productId, null, product!.price, 1),
+                      );
+                } else {
+                  final selectedTier = product!.customPrices!.firstWhere((t) => t.name == val);
+                  context.read<CartBloc>().add(
+                        CartUpdatePriceTier(
+                            item.productId, selectedTier.name, selectedTier.price, selectedTier.multiplier),
+                      );
+                }
+              },
+            ),
+          ),
+        ],
       ],
     );
   }
