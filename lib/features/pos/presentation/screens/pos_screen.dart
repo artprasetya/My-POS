@@ -447,7 +447,6 @@ class _CartSidebar extends StatelessWidget {
         children: [
           _SummaryRow(
               label: l10n.subtotal, value: state.totalAmount.toCurrency()),
-          _SummaryRow(label: '${l10n.tax} (0%)', value: 'Rp 0'),
           const Divider(height: 24),
           _SummaryRow(
             label: l10n.total,

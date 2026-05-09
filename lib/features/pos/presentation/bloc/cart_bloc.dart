@@ -83,14 +83,14 @@ class CartState extends Equatable {
   const CartState({
     this.items = const [],
     this.globalDiscount = 0,
-    this.taxRate = 0.11,
+    this.taxRate = 0.0,
   });
 
   double get subtotal => items.fold(0, (sum, item) => sum + item.total);
   double get globalDiscountAmount => subtotal * (globalDiscount / 100);
   double get afterDiscount => subtotal - globalDiscountAmount;
-  double get taxAmount => afterDiscount * taxRate;
-  double get total => afterDiscount + taxAmount;
+  double get taxAmount => 0.0;
+  double get total => afterDiscount;
   double get totalAmount => total; // Alias for UI consistency
   int get totalItems => items.fold(0, (sum, item) => sum + item.quantity);
   bool get isEmpty => items.isEmpty;

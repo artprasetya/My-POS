@@ -202,8 +202,10 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               label: 'Discount',
               value: '- ${txn.discountAmount.toCurrency()}',
               valueColor: AppColors.error),
-          const SizedBox(height: AppSizes.sm),
-          _SummaryRow(label: 'Tax', value: txn.taxAmount.toCurrency()),
+          if (txn.taxAmount > 0) ...[
+            const SizedBox(height: AppSizes.sm),
+            _SummaryRow(label: 'Tax', value: txn.taxAmount.toCurrency()),
+          ],
           const Padding(
             padding: EdgeInsets.symmetric(vertical: AppSizes.md),
             child: Divider(),

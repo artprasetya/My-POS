@@ -43,10 +43,16 @@ class TransactionRepository {
 
     // Insert transaction items
     final itemsData = items
-        .map((item) => {
-              ...item.toJson(),
-              'transaction_id': transactionId,
-            })
+        .map((item) {
+          final json = item.toJson();
+          // Remove keys that don't exist in the database schema
+          json.remove('selected_price_name');
+          json.remove('stock_multiplier');
+          return {
+            ...json,
+            'transaction_id': transactionId,
+          };
+        })
         .toList();
 
     await SupabaseService.table('transaction_items').insert(itemsData);
