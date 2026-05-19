@@ -1,0 +1,105 @@
+name: Deploy Web App to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Select Target Environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+# Grant write permissions so the runner can push the built site to the gh-pages branch
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy Web App
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Determine Environment & Configuration
+        id: config
+        run: |
+          # 1. Determine environment name (staging or production)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          elif [ "${{ github.ref_name }}" = "main" ]; then
+            ENV="production"
+          else
+            ENV="staging"
+          fi
+          
+          # 2. Determine base-href and target folder based on environment
+          if [ "$ENV" = "production" ]; then
+            BASE_HREF="/My-POS/"
+            TARGET_FOLDER="."
+            ENTRY_POINT="lib/main_production.dart"
+            ENV_FILE=".env.production"
+          else
+            BASE_HREF="/My-POS/staging/"
+            TARGET_FOLDER="staging"
+            ENTRY_POINT="lib/main_staging.dart"
+            ENV_FILE=".env.staging"
+          fi
+          
+          echo "Selected Environment: $ENV"
+          echo "Base Href: $BASE_HREF"
+          echo "Target Folder: $TARGET_FOLDER"
+          
+          # Output variables to be used in subsequent steps
+          echo "env_name=$ENV" >> $GITHUB_OUTPUT
+          echo "base_href=$BASE_HREF" >> $GITHUB_OUTPUT
+          echo "target_folder=$TARGET_FOLDER" >> $GITHUB_OUTPUT
+          echo "entry_point=$ENTRY_POINT" >> $GITHUB_OUTPUT
+          echo "env_file=$ENV_FILE" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # ─── Generate Environment File ───
+      - name: Create .env configuration file
+        run: |
+          ENV_FILE="${{ steps.config.outputs.env_file }}"
+          if [ "${{ steps.config.outputs.env_name }}" = "production" ]; then
+            echo "SUPABASE_URL=${{ secrets.SUPABASE_PROD_URL }}" > $ENV_FILE
+            echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_PROD_ANON_KEY }}" >> $ENV_FILE
+          else
+            echo "SUPABASE_URL=${{ secrets.SUPABASE_STAGING_URL }}" > $ENV_FILE
+            echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_STAGING_ANON_KEY }}" >> $ENV_FILE
+          fi
+
+      # ─── Build Flutter Web ───
+      - name: Build Web Application
+        run: |
+          flutter build web \
+            -t ${{ steps.config.outputs.entry_point }} \
+            --release \
+            --base-href "${{ steps.config.outputs.base_href }}"
+
+      # ─── Deploy to GitHub Pages ───
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build/web
+          branch: gh-pages
+          target-folder: ${{ steps.config.outputs.target_folder }}
+          clean: false # Do not delete other environment's build folder
