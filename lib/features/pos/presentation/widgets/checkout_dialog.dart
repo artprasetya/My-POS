@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:my_pos/features/pos/domain/models/cart_item.dart';
 import 'package:my_pos/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_pos/core/constants/app_colors.dart';
@@ -48,8 +49,8 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     context.read<TransactionBloc>().add(
           TransactionCreateRequested(
             items: widget.cartState.items,
-            subtotal: widget.cartState.totalAmount,
-            discountAmount: 0,
+            subtotal: widget.cartState.rawSubtotal,
+            discountAmount: widget.cartState.totalDiscount,
             taxAmount: 0,
             total: widget.cartState.totalAmount,
             paymentMethod: _paymentMethod,
@@ -100,7 +101,9 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
               ),
               const SizedBox(height: AppSizes.lg),
               _buildSummary(l10n),
-              const SizedBox(height: AppSizes.xl),
+              const SizedBox(height: AppSizes.lg),
+              _buildGlobalDiscountSection(l10n),
+              const SizedBox(height: AppSizes.lg),
               const Text('Payment Method',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: AppSizes.md),
@@ -185,39 +188,133 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
     );
   }
 
-  Widget _buildCashInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Cash Received',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: AppSizes.sm),
-        TextField(
-          controller: _cashController,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          decoration: const InputDecoration(
-            prefixText: 'Rp ',
-            hintText: '0',
+  Widget _buildGlobalDiscountSection(AppLocalizations l10n) {
+    return BlocBuilder<CartBloc, CartState>(
+      builder: (context, state) {
+        return Container(
+          padding: const EdgeInsets.all(AppSizes.md),
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.lightGray),
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
           ),
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: AppSizes.md),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Change', style: TextStyle(fontSize: 16)),
-            Text(
-              _change < 0 ? 'Rp 0' : _change.toCurrency(),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: _change < 0 ? AppColors.error : AppColors.success,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Global Discount',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  if (state.globalDiscountAmount > 0)
+                    Text('- ${state.globalDiscountAmount.toCurrency()}',
+                        style: const TextStyle(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.bold)),
+                ],
               ),
+              const SizedBox(height: AppSizes.sm),
+              Row(
+                children: [
+                  _DiscountTypeButton(
+                    label: '%',
+                    isSelected:
+                        state.globalDiscountType == DiscountType.percentage,
+                    onTap: () => context.read<CartBloc>().add(
+                          CartSetGlobalDiscount(state.globalDiscountValue,
+                              DiscountType.percentage),
+                        ),
+                  ),
+                  const SizedBox(width: AppSizes.xs),
+                  _DiscountTypeButton(
+                    label: 'Rp',
+                    isSelected: state.globalDiscountType == DiscountType.amount,
+                    onTap: () => context.read<CartBloc>().add(
+                          CartSetGlobalDiscount(
+                              state.globalDiscountValue, DiscountType.amount),
+                        ),
+                  ),
+                  const SizedBox(width: AppSizes.md),
+                  Expanded(
+                    child: SizedBox(
+                      height: 40,
+                      child: TextField(
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: '0',
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSizes.sm),
+                          border: const OutlineInputBorder(),
+                          prefixText:
+                              state.globalDiscountType == DiscountType.amount
+                                  ? 'Rp '
+                                  : null,
+                          suffixText: state.globalDiscountType ==
+                                  DiscountType.percentage
+                              ? '%'
+                              : null,
+                        ),
+                        onChanged: (val) {
+                          final discount = double.tryParse(val) ?? 0;
+                          context.read<CartBloc>().add(
+                                CartSetGlobalDiscount(
+                                    discount, state.globalDiscountType),
+                              );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCashInput() {
+    return BlocBuilder<CartBloc, CartState>(
+      builder: (context, state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Cash Received',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: AppSizes.sm),
+            TextField(
+              controller: _cashController,
+              keyboardType: TextInputType.number,
+              autofocus: false,
+              decoration: const InputDecoration(
+                prefixText: 'Rp ',
+                hintText: '0',
+              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              onChanged: (val) {
+                final cash = double.tryParse(val) ?? 0;
+                setState(() {
+                  _change = cash - state.totalAmount;
+                });
+              },
+            ),
+            const SizedBox(height: AppSizes.md),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Change', style: TextStyle(fontSize: 16)),
+                Text(
+                  _change < 0 ? 'Rp 0' : _change.toCurrency(),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _change < 0 ? AppColors.error : AppColors.success,
+                  ),
+                ),
+              ],
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -347,6 +444,45 @@ class ReceiptDialog extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscountTypeButton extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _DiscountTypeButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+      child: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.lightGray,
+          ),
+          borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.mediumGray,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

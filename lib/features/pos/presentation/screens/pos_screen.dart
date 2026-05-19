@@ -394,7 +394,9 @@ class _CartSidebar extends StatelessWidget {
                         final item = state.items[index];
                         return BlocBuilder<ProductBloc, ProductState>(
                           builder: (context, productState) {
-                            final product = productState.products.cast<Product?>().firstWhere(
+                            final product = productState.products
+                                .cast<Product?>()
+                                .firstWhere(
                                   (p) => p?.id == item.productId,
                                   orElse: () => null,
                                 );
@@ -446,7 +448,12 @@ class _CartSidebar extends StatelessWidget {
       child: Column(
         children: [
           _SummaryRow(
-              label: l10n.subtotal, value: state.totalAmount.toCurrency()),
+              label: l10n.subtotal, value: state.rawSubtotal.toCurrency()),
+          if (state.totalDiscount > 0)
+            _SummaryRow(
+              label: 'Total Discount',
+              value: '- ${state.totalDiscount.toCurrency()}',
+            ),
           const Divider(height: 24),
           _SummaryRow(
             label: l10n.total,
@@ -510,8 +517,8 @@ class _CartItemTile extends StatelessWidget {
                   ),
                   Text(
                     item.unitPrice.toCurrency(),
-                    style:
-                        const TextStyle(color: AppColors.mediumGray, fontSize: 12),
+                    style: const TextStyle(
+                        color: AppColors.mediumGray, fontSize: 12),
                   ),
                 ],
               ),
@@ -520,9 +527,8 @@ class _CartItemTile extends StatelessWidget {
               children: [
                 _QtyButton(
                   icon: Icons.remove,
-                  onTap: () => context
-                      .read<CartBloc>()
-                      .add(CartUpdateQuantity(item.productId, item.quantity - 1)),
+                  onTap: () => context.read<CartBloc>().add(
+                      CartUpdateQuantity(item.productId, item.quantity - 1)),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
@@ -533,9 +539,8 @@ class _CartItemTile extends StatelessWidget {
                 ),
                 _QtyButton(
                   icon: Icons.add,
-                  onTap: () => context
-                      .read<CartBloc>()
-                      .add(CartUpdateQuantity(item.productId, item.quantity + 1)),
+                  onTap: () => context.read<CartBloc>().add(
+                      CartUpdateQuantity(item.productId, item.quantity + 1)),
                 ),
               ],
             ),
@@ -550,7 +555,8 @@ class _CartItemTile extends StatelessWidget {
               isExpanded: true,
               isDense: true,
               value: item.selectedPriceName,
-              hint: const Text('Harga Jual (Standard)', style: TextStyle(fontSize: 12)),
+              hint: const Text('Harga Jual (Standard)',
+                  style: TextStyle(fontSize: 12)),
               style: const TextStyle(fontSize: 12, color: AppColors.primary),
               icon: const Icon(Icons.arrow_drop_down, size: 16),
               items: [
@@ -569,20 +575,121 @@ class _CartItemTile extends StatelessWidget {
                 if (val == null) {
                   // Revert to standard price
                   context.read<CartBloc>().add(
-                        CartUpdatePriceTier(item.productId, null, product!.price, 1),
+                        CartUpdatePriceTier(
+                            item.productId, null, product!.price, 1),
                       );
                 } else {
-                  final selectedTier = product!.customPrices!.firstWhere((t) => t.name == val);
+                  final selectedTier =
+                      product!.customPrices!.firstWhere((t) => t.name == val);
                   context.read<CartBloc>().add(
-                        CartUpdatePriceTier(
-                            item.productId, selectedTier.name, selectedTier.price, selectedTier.multiplier),
+                        CartUpdatePriceTier(item.productId, selectedTier.name,
+                            selectedTier.price, selectedTier.multiplier),
                       );
                 }
               },
             ),
           ),
         ],
+        const SizedBox(height: AppSizes.xs),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (item.discountValue > 0)
+              Text(
+                'Disc. ${item.discountType == DiscountType.percentage ? '${item.discountValue.toStringAsFixed(0)}%' : item.discountValue.toCurrency()} (-${item.discountAmount.toCurrency()})',
+                style: const TextStyle(
+                    color: AppColors.error,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500),
+              )
+            else
+              const SizedBox.shrink(),
+            TextButton(
+              onPressed: () => _showDiscountDialog(context),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                item.discountValue > 0 ? 'Change Discount' : 'Add Discount',
+                style: const TextStyle(fontSize: 11),
+              ),
+            ),
+          ],
+        ),
       ],
+    );
+  }
+
+  void _showDiscountDialog(BuildContext context) {
+    final controller =
+        TextEditingController(text: item.discountValue.toStringAsFixed(0));
+    DiscountType selectedType = item.discountType;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Discount for ${item.productName}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: RadioListTile<DiscountType>(
+                      title: const Text('%', style: TextStyle(fontSize: 14)),
+                      value: DiscountType.percentage,
+                      groupValue: selectedType,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (val) => setState(() => selectedType = val!),
+                    ),
+                  ),
+                  Expanded(
+                    child: RadioListTile<DiscountType>(
+                      title: const Text('Rp', style: TextStyle(fontSize: 14)),
+                      value: DiscountType.amount,
+                      groupValue: selectedType,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (val) => setState(() => selectedType = val!),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSizes.md),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: selectedType == DiscountType.percentage
+                      ? 'Discount Percentage (%)'
+                      : 'Discount Amount (Rp)',
+                  suffixText: selectedType == DiscountType.percentage ? '%' : null,
+                  prefixText: selectedType == DiscountType.amount ? 'Rp ' : null,
+                  hintText: '0',
+                ),
+                autofocus: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final discount = double.tryParse(controller.text) ?? 0;
+                context.read<CartBloc>().add(
+                    CartUpdateDiscount(item.productId, discount, selectedType));
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
