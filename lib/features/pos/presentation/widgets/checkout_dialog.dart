@@ -170,20 +170,6 @@ class _CheckoutDialogState extends State<CheckoutDialog> {
           isSelected: _paymentMethod == 'cash',
           onTap: () => setState(() => _paymentMethod = 'cash'),
         ),
-        const SizedBox(width: AppSizes.md),
-        _PaymentMethodCard(
-          label: 'QRIS',
-          icon: Icons.qr_code_rounded,
-          isSelected: _paymentMethod == 'qris',
-          onTap: () => setState(() => _paymentMethod = 'qris'),
-        ),
-        const SizedBox(width: AppSizes.md),
-        _PaymentMethodCard(
-          label: 'Card',
-          icon: Icons.credit_card_rounded,
-          isSelected: _paymentMethod == 'card',
-          onTap: () => setState(() => _paymentMethod = 'card'),
-        ),
       ],
     );
   }
