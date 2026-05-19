@@ -68,6 +68,12 @@ jobs:
           echo "entry_point=$ENTRY_POINT" >> $GITHUB_OUTPUT
           echo "env_file=$ENV_FILE" >> $GITHUB_OUTPUT
 
+      - name: Create directories & dummy env files
+        run: |
+          mkdir -p assets assets/icons assets/images
+          touch .env.staging
+          touch .env.production
+
       - name: Install dependencies
         run: flutter pub get
 
