@@ -97,6 +97,10 @@ jobs:
             --release \
             --base-href "${{ steps.config.outputs.base_href }}"
 
+      # ─── Bypass Jekyll processing on GitHub Pages ───
+      - name: Create .nojekyll file
+        run: touch build/web/.nojekyll
+
       # ─── Deploy to GitHub Pages ───
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
