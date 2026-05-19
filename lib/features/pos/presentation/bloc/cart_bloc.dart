@@ -9,20 +9,29 @@ abstract class CartEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class CartAddItem extends CartEvent {
+class CartItemAdded extends CartEvent {
   final Product product;
-  CartAddItem(this.product);
+  CartItemAdded(this.product);
 
   @override
   List<Object?> get props => [product];
 }
 
-class CartRemoveItem extends CartEvent {
+class CartItemRemoved extends CartEvent {
   final String productId;
-  CartRemoveItem(this.productId);
+  CartItemRemoved(this.productId);
 
   @override
   List<Object?> get props => [productId];
+}
+
+class CartBarcodeScanned extends CartEvent {
+  final String barcode;
+  final List<Product> availableProducts;
+  CartBarcodeScanned(this.barcode, this.availableProducts);
+
+  @override
+  List<Object?> get props => [barcode, availableProducts];
 }
 
 class CartUpdateQuantity extends CartEvent {
@@ -34,73 +43,103 @@ class CartUpdateQuantity extends CartEvent {
   List<Object?> get props => [productId, quantity];
 }
 
+class CartUpdatePriceTier extends CartEvent {
+  final String productId;
+  final String? priceName;
+  final double unitPrice;
+  final int multiplier;
+
+  CartUpdatePriceTier(this.productId, this.priceName, this.unitPrice, this.multiplier);
+
+  @override
+  List<Object?> get props => [productId, priceName, unitPrice, multiplier];
+}
+
 class CartUpdateDiscount extends CartEvent {
   final String productId;
   final double discount;
-  CartUpdateDiscount(this.productId, this.discount);
+  final DiscountType discountType;
+  CartUpdateDiscount(this.productId, this.discount, this.discountType);
 
   @override
-  List<Object?> get props => [productId, discount];
+  List<Object?> get props => [productId, discount, discountType];
 }
 
 class CartSetGlobalDiscount extends CartEvent {
   final double discount;
-  CartSetGlobalDiscount(this.discount);
+  final DiscountType discountType;
+  CartSetGlobalDiscount(this.discount, this.discountType);
 
   @override
-  List<Object?> get props => [discount];
+  List<Object?> get props => [discount, discountType];
 }
 
-class CartClear extends CartEvent {}
+class CartCleared extends CartEvent {}
 
 // ─── State ───
 class CartState extends Equatable {
   final List<CartItem> items;
-  final double globalDiscount; // percentage
+  final double globalDiscountValue;
+  final DiscountType globalDiscountType;
   final double taxRate;
 
   const CartState({
     this.items = const [],
-    this.globalDiscount = 0,
-    this.taxRate = 0.11,
+    this.globalDiscountValue = 0,
+    this.globalDiscountType = DiscountType.percentage,
+    this.taxRate = 0.0,
   });
 
-  double get subtotal => items.fold(0, (sum, item) => sum + item.total);
-  double get globalDiscountAmount => subtotal * (globalDiscount / 100);
+  double get rawSubtotal => items.fold(0, (sum, item) => sum + (item.unitPrice * item.quantity));
+  double get totalItemDiscount => items.fold(0, (sum, item) => sum + item.discountAmount);
+  double get subtotal => rawSubtotal - totalItemDiscount;
+  double get globalDiscountAmount {
+    if (globalDiscountType == DiscountType.percentage) {
+      return subtotal * (globalDiscountValue / 100);
+    } else {
+      return globalDiscountValue;
+    }
+  }
   double get afterDiscount => subtotal - globalDiscountAmount;
-  double get taxAmount => afterDiscount * taxRate;
-  double get total => afterDiscount + taxAmount;
+  double get taxAmount => 0.0;
+  double get total => afterDiscount;
+  double get totalAmount => total; 
+  double get totalDiscount => totalItemDiscount + globalDiscountAmount;
   int get totalItems => items.fold(0, (sum, item) => sum + item.quantity);
   bool get isEmpty => items.isEmpty;
 
   CartState copyWith({
     List<CartItem>? items,
-    double? globalDiscount,
+    double? globalDiscountValue,
+    DiscountType? globalDiscountType,
     double? taxRate,
   }) {
     return CartState(
       items: items ?? this.items,
-      globalDiscount: globalDiscount ?? this.globalDiscount,
+      globalDiscountValue: globalDiscountValue ?? this.globalDiscountValue,
+      globalDiscountType: globalDiscountType ?? this.globalDiscountType,
       taxRate: taxRate ?? this.taxRate,
     );
   }
 
   @override
-  List<Object?> get props => [items, globalDiscount, taxRate];
+  List<Object?> get props => [items, globalDiscountValue, globalDiscountType, taxRate];
 }
 
 // ─── Bloc ───
 class CartBloc extends Bloc<CartEvent, CartState> {
   CartBloc() : super(const CartState()) {
-    on<CartAddItem>(_onAddItem);
-    on<CartRemoveItem>(_onRemoveItem);
+    on<CartItemAdded>(_onAddItem);
+    on<CartItemRemoved>(_onRemoveItem);
     on<CartUpdateQuantity>(_onUpdateQuantity);
+    on<CartUpdatePriceTier>(_onUpdatePriceTier);
     on<CartUpdateDiscount>(_onUpdateDiscount);
     on<CartSetGlobalDiscount>(_onSetGlobalDiscount);
-    on<CartClear>(_onClear);
+    on<CartBarcodeScanned>(_onBarcodeScanned);
+    on<CartCleared>(_onClear);
   }
 
-  void _onAddItem(CartAddItem event, Emitter<CartState> emit) {
+  void _onAddItem(CartItemAdded event, Emitter<CartState> emit) {
     final items = List<CartItem>.from(state.items);
     final existingIndex =
         items.indexWhere((item) => item.productId == event.product.id);
@@ -123,7 +162,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     emit(state.copyWith(items: items));
   }
 
-  void _onRemoveItem(CartRemoveItem event, Emitter<CartState> emit) {
+  void _onRemoveItem(CartItemRemoved event, Emitter<CartState> emit) {
     final items = state.items
         .where((item) => item.productId != event.productId)
         .toList();
@@ -132,7 +171,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
   void _onUpdateQuantity(CartUpdateQuantity event, Emitter<CartState> emit) {
     if (event.quantity <= 0) {
-      add(CartRemoveItem(event.productId));
+      add(CartItemRemoved(event.productId));
       return;
     }
 
@@ -146,10 +185,27 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     emit(state.copyWith(items: items));
   }
 
+  void _onUpdatePriceTier(CartUpdatePriceTier event, Emitter<CartState> emit) {
+    final items = state.items.map((item) {
+      if (item.productId == event.productId) {
+        return item.copyWith(
+          selectedPriceName: event.priceName,
+          unitPrice: event.unitPrice,
+          stockMultiplier: event.multiplier,
+        );
+      }
+      return item;
+    }).toList();
+    emit(state.copyWith(items: items));
+  }
+
   void _onUpdateDiscount(CartUpdateDiscount event, Emitter<CartState> emit) {
     final items = state.items.map((item) {
       if (item.productId == event.productId) {
-        return item.copyWith(discount: event.discount);
+        return item.copyWith(
+          discountValue: event.discount,
+          discountType: event.discountType,
+        );
       }
       return item;
     }).toList();
@@ -159,10 +215,24 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
   void _onSetGlobalDiscount(
       CartSetGlobalDiscount event, Emitter<CartState> emit) {
-    emit(state.copyWith(globalDiscount: event.discount));
+    emit(state.copyWith(
+      globalDiscountValue: event.discount,
+      globalDiscountType: event.discountType,
+    ));
   }
 
-  void _onClear(CartClear event, Emitter<CartState> emit) {
+  void _onBarcodeScanned(CartBarcodeScanned event, Emitter<CartState> emit) {
+    try {
+      final product = event.availableProducts.firstWhere(
+        (p) => p.barcode == event.barcode,
+      );
+      add(CartItemAdded(product));
+    } catch (_) {
+      // Product not found
+    }
+  }
+
+  void _onClear(CartCleared event, Emitter<CartState> emit) {
     emit(const CartState());
   }
 }

@@ -1,0 +1,75 @@
+name: Supabase Keep-Alive
+
+on:
+  # Run every 3 days at 08:00 UTC (15:00 WIB)
+  schedule:
+    - cron: "0 8 */3 * *"
+
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  ping-supabase:
+    name: Ping Supabase to prevent inactivity pause
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Map secrets to env vars so they can be used in `if:` conditions
+    # (secrets context is not allowed in step-level if expressions)
+    env:
+      SUPABASE_PROD_URL: ${{ secrets.SUPABASE_PROD_URL }}
+      SUPABASE_PROD_ANON_KEY: ${{ secrets.SUPABASE_PROD_ANON_KEY }}
+
+    steps:
+      # ─── Staging ───────────────────────────────────────────────────────────
+      - name: "[Staging] Ping Supabase"
+        run: |
+          echo "🏓 [STAGING] Pinging Supabase at $(date)..."
+
+          HTTP_STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+            --max-time 30 \
+            --header "apikey: ${{ secrets.SUPABASE_STAGING_ANON_KEY }}" \
+            --header "Authorization: Bearer ${{ secrets.SUPABASE_STAGING_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_STAGING_URL }}/rest/v1/")
+
+          echo "📡 [STAGING] Response status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ [STAGING] Supabase is alive!"
+          elif [ "$HTTP_STATUS" -eq 401 ] || [ "$HTTP_STATUS" -eq 400 ]; then
+            echo "✅ [STAGING] Supabase is alive (got $HTTP_STATUS — server is running)."
+          else
+            echo "❌ [STAGING] Unexpected response: $HTTP_STATUS"
+            exit 1
+          fi
+
+      # ─── Production ────────────────────────────────────────────────────────
+      - name: "[Production] Ping Supabase"
+        # Use env context (not secrets) — secrets are not accessible in if: conditions
+        if: env.SUPABASE_PROD_URL != ''
+        run: |
+          echo "🏓 [PRODUCTION] Pinging Supabase at $(date)..."
+
+          HTTP_STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" \
+            --max-time 30 \
+            --header "apikey: $SUPABASE_PROD_ANON_KEY" \
+            --header "Authorization: Bearer $SUPABASE_PROD_ANON_KEY" \
+            "$SUPABASE_PROD_URL/rest/v1/")
+
+          echo "📡 [PRODUCTION] Response status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "✅ [PRODUCTION] Supabase is alive!"
+          elif [ "$HTTP_STATUS" -eq 401 ] || [ "$HTTP_STATUS" -eq 400 ]; then
+            echo "✅ [PRODUCTION] Supabase is alive (got $HTTP_STATUS — server is running)."
+          else
+            echo "❌ [PRODUCTION] Unexpected response: $HTTP_STATUS"
+            exit 1
+          fi
+
+
+      # ─── Summary ───────────────────────────────────────────────────────────
+      - name: Log keep-alive timestamp
+        run: |
+          echo "⏰ Keep-alive ping completed at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "📅 Next ping in ~3 days. Supabase free tier pauses after 7 days of inactivity."
+

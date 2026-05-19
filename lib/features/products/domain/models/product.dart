@@ -1,5 +1,36 @@
 import 'package:equatable/equatable.dart';
 
+class ProductPriceTier extends Equatable {
+  final String name;
+  final double price;
+  final int multiplier; // Unit conversion (e.g. 1 Dus = 24 pcs, multiplier is 24)
+
+  const ProductPriceTier({
+    required this.name,
+    required this.price,
+    this.multiplier = 1,
+  });
+
+  factory ProductPriceTier.fromJson(Map<String, dynamic> json) {
+    return ProductPriceTier(
+      name: json['name'] as String,
+      price: (json['price'] as num).toDouble(),
+      multiplier: json['multiplier'] as int? ?? 1,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'price': price,
+      'multiplier': multiplier,
+    };
+  }
+
+  @override
+  List<Object?> get props => [name, price, multiplier];
+}
+
 class Product extends Equatable {
   final String id;
   final String name;
@@ -13,6 +44,7 @@ class Product extends Equatable {
   final String? imageUrl;
   final String? description;
   final bool isActive;
+  final List<ProductPriceTier>? customPrices;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -29,6 +61,7 @@ class Product extends Equatable {
     this.imageUrl,
     this.description,
     this.isActive = true,
+    this.customPrices,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -38,6 +71,15 @@ class Product extends Equatable {
   double get profit => costPrice != null ? price - costPrice! : 0;
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    List<ProductPriceTier>? parsedCustomPrices;
+    if (json['custom_prices'] != null) {
+      if (json['custom_prices'] is List) {
+        parsedCustomPrices = (json['custom_prices'] as List)
+            .map((e) => ProductPriceTier.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    }
+
     return Product(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -55,6 +97,7 @@ class Product extends Equatable {
       imageUrl: json['image_url'] as String?,
       description: json['description'] as String?,
       isActive: json['is_active'] as bool? ?? true,
+      customPrices: parsedCustomPrices,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -72,6 +115,7 @@ class Product extends Equatable {
       'image_url': imageUrl,
       'description': description,
       'is_active': isActive,
+      'custom_prices': customPrices?.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -88,6 +132,7 @@ class Product extends Equatable {
     String? imageUrl,
     String? description,
     bool? isActive,
+    List<ProductPriceTier>? customPrices,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -104,6 +149,7 @@ class Product extends Equatable {
       imageUrl: imageUrl ?? this.imageUrl,
       description: description ?? this.description,
       isActive: isActive ?? this.isActive,
+      customPrices: customPrices ?? this.customPrices,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -112,6 +158,6 @@ class Product extends Equatable {
   @override
   List<Object?> get props => [
         id, name, sku, barcode, categoryId, price,
-        costPrice, stock, imageUrl, description, isActive,
+        costPrice, stock, imageUrl, description, isActive, customPrices,
       ];
 }

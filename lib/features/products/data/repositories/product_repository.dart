@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:my_pos/features/products/domain/models/category.dart';
 import 'package:my_pos/features/products/domain/models/product.dart';
@@ -12,8 +13,7 @@ class ProductRepository {
     String? search,
     bool? activeOnly,
   }) async {
-    var query = SupabaseService.table('products')
-        .select('*, categories(name)');
+    var query = SupabaseService.table('products').select('*, categories(name)');
 
     if (categoryId != null) {
       query = query.eq('category_id', categoryId);
@@ -34,7 +34,9 @@ class ProductRepository {
       final data = await SupabaseService.table('products')
           .select('*, categories(name)')
           .eq('barcode', barcode)
-          .single();
+          .maybeSingle();
+
+      if (data == null) return null;
       return Product.fromJson(data);
     } catch (_) {
       return null;
@@ -45,25 +47,52 @@ class ProductRepository {
     final data = await SupabaseService.table('products')
         .select('*, categories(name)')
         .eq('id', id)
-        .single();
+        .maybeSingle();
+
+    if (data == null) {
+      throw Exception('Product not found');
+    }
     return Product.fromJson(data);
   }
 
   Future<Product> createProduct(Product product) async {
-    final data = await SupabaseService.table('products')
+    final response = await SupabaseService.table('products')
         .insert(product.toJson())
-        .select('*, categories(name)')
-        .single();
-    return Product.fromJson(data);
+        .select('*, categories(name)');
+
+    final data = response as List;
+    if (data.isEmpty) {
+      throw Exception('Failed to create product (0 rows returned)');
+    }
+    return Product.fromJson(data.first);
   }
 
   Future<Product> updateProduct(Product product) async {
-    final data = await SupabaseService.table('products')
-        .update(product.toJson())
+    final payload = product.toJson();
+    final response = await SupabaseService.table('products')
+        .update(payload)
         .eq('id', product.id)
-        .select('*, categories(name)')
-        .single();
-    return Product.fromJson(data);
+        .select();
+
+    final data = response as List;
+    if (data.isEmpty) {
+      debugPrint(
+          '===> Update failed (0 rows). ID: ${product.id}. Payload: $payload');
+      throw Exception(
+          'Update failed (0 rows). ID: ${product.id}. Payload: $payload');
+    }
+    
+    // Fetch categories manually to keep it compatible
+    final catResponse = await SupabaseService.table('categories')
+        .select('name')
+        .eq('id', product.categoryId!)
+        .maybeSingle();
+        
+    if (catResponse != null) {
+      data.first['categories'] = {'name': catResponse['name']};
+    }
+
+    return Product.fromJson(data.first);
   }
 
   Future<void> deleteProduct(String id) async {
@@ -72,8 +101,7 @@ class ProductRepository {
 
   Future<void> updateStock(String productId, int newStock) async {
     await SupabaseService.table('products')
-        .update({'stock': newStock})
-        .eq('id', productId);
+        .update({'stock': newStock}).eq('id', productId);
   }
 
   // ─── Product Image ───
@@ -101,7 +129,11 @@ class ProductRepository {
     final data = await SupabaseService.table('categories')
         .insert(category.toJson())
         .select()
-        .single();
+        .maybeSingle();
+
+    if (data == null) {
+      throw Exception('Failed to create category');
+    }
     return Category.fromJson(data);
   }
 
@@ -110,7 +142,11 @@ class ProductRepository {
         .update(category.toJson())
         .eq('id', category.id)
         .select()
-        .single();
+        .maybeSingle();
+
+    if (data == null) {
+      throw Exception('Category not found');
+    }
     return Category.fromJson(data);
   }
 

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+enum DiscountType { percentage, amount }
 
 class CartItem extends Equatable {
   final String productId;
@@ -6,7 +7,10 @@ class CartItem extends Equatable {
   final double unitPrice;
   final int quantity;
   final String? imageUrl;
-  final double discount;
+  final double discountValue;
+  final DiscountType discountType;
+  final String? selectedPriceName;
+  final int stockMultiplier;
 
   const CartItem({
     required this.productId,
@@ -14,11 +18,21 @@ class CartItem extends Equatable {
     required this.unitPrice,
     required this.quantity,
     this.imageUrl,
-    this.discount = 0,
+    this.discountValue = 0,
+    this.discountType = DiscountType.percentage,
+    this.selectedPriceName,
+    this.stockMultiplier = 1,
   });
 
   double get subtotal => unitPrice * quantity;
-  double get discountAmount => subtotal * (discount / 100);
+  double get discountAmount {
+    if (discountType == DiscountType.percentage) {
+      return subtotal * (discountValue / 100);
+    } else {
+      return discountValue;
+    }
+  }
+
   double get total => subtotal - discountAmount;
 
   CartItem copyWith({
@@ -27,7 +41,10 @@ class CartItem extends Equatable {
     double? unitPrice,
     int? quantity,
     String? imageUrl,
-    double? discount,
+    double? discountValue,
+    DiscountType? discountType,
+    String? selectedPriceName,
+    int? stockMultiplier,
   }) {
     return CartItem(
       productId: productId ?? this.productId,
@@ -35,7 +52,10 @@ class CartItem extends Equatable {
       unitPrice: unitPrice ?? this.unitPrice,
       quantity: quantity ?? this.quantity,
       imageUrl: imageUrl ?? this.imageUrl,
-      discount: discount ?? this.discount,
+      discountValue: discountValue ?? this.discountValue,
+      discountType: discountType ?? this.discountType,
+      selectedPriceName: selectedPriceName ?? this.selectedPriceName,
+      stockMultiplier: stockMultiplier ?? this.stockMultiplier,
     );
   }
 
@@ -46,9 +66,22 @@ class CartItem extends Equatable {
       'unit_price': unitPrice,
       'quantity': quantity,
       'subtotal': total,
+      'selected_price_name': selectedPriceName,
+      'stock_multiplier': stockMultiplier,
+      'discount_value': discountValue,
+      'discount_type': discountType.name,
     };
   }
 
   @override
-  List<Object?> get props => [productId, productName, unitPrice, quantity, discount];
+  List<Object?> get props => [
+        productId,
+        productName,
+        unitPrice,
+        quantity,
+        discountValue,
+        discountType,
+        selectedPriceName,
+        stockMultiplier,
+      ];
 }

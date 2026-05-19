@@ -151,7 +151,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
         search: event.search,
         activeOnly: false,
       );
-      
+
       // If categories are empty, load them too
       List<Category> categories = state.categories;
       if (categories.isEmpty) {
@@ -186,7 +186,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
 
       final product = event.product.copyWith(imageUrl: imageUrl);
       await _repository.createProduct(product);
-      
+
       emit(state.copyWith(successMessage: 'Product created successfully'));
       add(ProductLoadProductsRequested(
         categoryId: state.selectedCategoryId,
@@ -213,7 +213,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
 
       final product = event.product.copyWith(imageUrl: imageUrl);
       await _repository.updateProduct(product);
-      
+
       emit(state.copyWith(successMessage: 'Product updated successfully'));
       add(ProductLoadProductsRequested(
         categoryId: state.selectedCategoryId,

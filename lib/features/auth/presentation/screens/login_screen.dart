@@ -54,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            context.go('/');
+            context.go('/dashboard');
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -305,6 +305,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               .animate()
                               .fadeIn(delay: 800.ms, duration: 400.ms),
 
+                          /*
                           const SizedBox(height: AppSizes.xl),
                           // Divider
                           Row(
@@ -352,6 +353,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ).animate().fadeIn(delay: 1000.ms),
+                          */
                         ],
                       ),
                     ),

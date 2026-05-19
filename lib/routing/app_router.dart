@@ -9,6 +9,9 @@ import 'package:my_pos/features/products/presentation/screens/category_managemen
 import 'package:my_pos/features/products/presentation/screens/add_edit_product_screen.dart';
 import 'package:my_pos/features/pos/presentation/screens/pos_screen.dart';
 import 'package:my_pos/features/transactions/presentation/screens/transaction_list_screen.dart';
+import 'package:my_pos/features/transactions/presentation/screens/transaction_detail_screen.dart';
+import 'package:my_pos/features/inventory/presentation/screens/inventory_screen.dart';
+import 'package:my_pos/features/reports/presentation/screens/reports_screen.dart';
 import 'package:my_pos/features/settings/presentation/screens/settings_screen.dart';
 import 'package:my_pos/routing/shell_scaffold.dart';
 import 'package:my_pos/routing/go_router_refresh_stream.dart';
@@ -27,7 +30,7 @@ class AppRouter {
     refreshListenable: GoRouterRefreshStream(authBloc.stream),
     redirect: (context, state) {
       final authState = authBloc.state;
-      final isLoggingIn = state.matchedLocation == '/login';
+      final isLoggingIn = state.matchedLocation.startsWith('/login');
 
       if (authState is AuthInitial || authState is AuthLoading) {
         return null;
@@ -88,9 +91,29 @@ class AppRouter {
             ],
           ),
           GoRoute(
-            path: '/transactions',
+            path: '/reports',
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: TransactionListScreen(),
+              child: ReportsScreen(),
+            ),
+            routes: [
+              GoRoute(
+                path: 'history',
+                builder: (context, state) => const TransactionListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => TransactionDetailScreen(
+                      transactionId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/inventory',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: InventoryScreen(),
             ),
           ),
           GoRoute(

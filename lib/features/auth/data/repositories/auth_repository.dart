@@ -82,14 +82,17 @@ class AuthRepository {
   // ─── PIN Login ───
   Future<UserProfile?> loginWithPin(String pin) async {
     try {
+      // NOTE: Requires RLS policy:
+      // CREATE POLICY "Allow PIN search" ON profiles FOR SELECT TO anon, authenticated USING (pin IS NOT NULL);
       final response = await SupabaseService.table('profiles')
           .select()
           .eq('pin', pin)
-          .single();
+          .maybeSingle();
 
+      if (response == null) return null;
       return UserProfile.fromJson(response);
-    } catch (_) {
-      return null;
+    } catch (e) {
+      throw Exception('PIN Login failed. Please check your connection or try again later.');
     }
   }
 
@@ -104,25 +107,39 @@ class AuthRepository {
   // ─── Helper: Get or create profile from Supabase user ───
   Future<UserProfile> _getOrCreateProfile(sb.User user) async {
     try {
-      final data = await SupabaseService.table('profiles')
+      // 1. Try to get existing profile
+      final existing = await SupabaseService.table('profiles')
           .select()
           .eq('id', user.id)
-          .single();
-      return UserProfile.fromJson(data);
-    } catch (_) {
-      // Profile doesn't exist yet, create it
-      final profile = {
+          .maybeSingle();
+
+      if (existing != null) {
+        return UserProfile.fromJson(existing);
+      }
+
+      // 2. Create if not exists
+      final newProfile = {
         'id': user.id,
         'email': user.email ?? '',
-        'full_name': user.userMetadata?['full_name'] ?? '',
+        'full_name': user.userMetadata?['full_name'] ??
+            user.userMetadata?['name'] ??
+            'New User',
         'role': 'admin',
+        'created_at': DateTime.now().toIso8601String(),
       };
-      await SupabaseService.table('profiles').insert(profile);
+
       final data = await SupabaseService.table('profiles')
+          .insert(newProfile)
           .select()
-          .eq('id', user.id)
-          .single();
+          .maybeSingle();
+
+      if (data == null) {
+        throw Exception('Failed to create or retrieve profile');
+      }
+
       return UserProfile.fromJson(data);
+    } catch (e) {
+      throw Exception('Authentication profile error: $e');
     }
   }
 }

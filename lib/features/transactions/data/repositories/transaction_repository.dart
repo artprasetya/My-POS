@@ -20,53 +20,71 @@ class TransactionRepository {
     final cashierId = SupabaseService.currentUser?.id;
 
     // Insert transaction
-    final txnData = await SupabaseService.table('transactions').insert({
-      'transaction_number': transactionNumber,
-      'subtotal': subtotal,
-      'discount_amount': discountAmount,
-      'tax_amount': taxAmount,
-      'total': total,
-      'payment_method': paymentMethod,
-      'payment_status': 'completed',
-      'cashier_id': cashierId,
-      'notes': notes,
-    }).select().single();
+    final txnData = await SupabaseService.table('transactions')
+        .insert({
+          'transaction_number': transactionNumber,
+          'subtotal': subtotal,
+          'discount_amount': discountAmount,
+          'tax_amount': taxAmount,
+          'total': total,
+          'payment_method': paymentMethod,
+          'payment_status': 'completed',
+          'cashier_id': cashierId,
+          'notes': notes,
+        })
+        .select()
+        .maybeSingle();
+
+    if (txnData == null) {
+      throw Exception('Failed to create transaction record');
+    }
 
     final transactionId = txnData['id'] as String;
 
     // Insert transaction items
-    final itemsData = items.map((item) => {
-          ...item.toJson(),
-          'transaction_id': transactionId,
-        }).toList();
+    final itemsData = items
+        .map((item) {
+          final json = item.toJson();
+          // Remove keys that don't exist in the database schema
+          json.remove('selected_price_name');
+          json.remove('stock_multiplier');
+          return {
+            ...json,
+            'transaction_id': transactionId,
+          };
+        })
+        .toList();
 
     await SupabaseService.table('transaction_items').insert(itemsData);
 
     // Update product stock
     for (final item in items) {
+      final totalQuantityToDeduct = item.quantity * item.stockMultiplier;
       await SupabaseService.client.rpc('decrement_stock', params: {
         'p_product_id': item.productId,
-        'p_quantity': item.quantity,
+        'p_quantity': totalQuantityToDeduct,
       }).catchError((_) async {
         // Fallback: manual stock update
         final product = await SupabaseService.table('products')
             .select('stock')
             .eq('id', item.productId)
-            .single();
+            .maybeSingle();
+        
+        if (product == null) return;
         final currentStock = product['stock'] as int;
-        await SupabaseService.table('products')
-            .update({'stock': currentStock - item.quantity})
-            .eq('id', item.productId);
+        await SupabaseService.table('products').update(
+            {'stock': currentStock - totalQuantityToDeduct}).eq('id', item.productId);
       });
     }
 
     // Log inventory
     for (final item in items) {
+      final totalQuantityToDeduct = item.quantity * item.stockMultiplier;
       await SupabaseService.table('inventory_logs').insert({
         'product_id': item.productId,
         'type': 'out',
-        'quantity': item.quantity,
-        'notes': 'Sale: $transactionNumber',
+        'quantity': totalQuantityToDeduct,
+        'notes': 'Sale: $transactionNumber${item.selectedPriceName != null ? " (${item.selectedPriceName})" : ""}',
       });
     }
 
@@ -83,8 +101,8 @@ class TransactionRepository {
     String? search,
     int limit = 50,
   }) async {
-    var query = SupabaseService.table('transactions')
-        .select('*, transaction_items(*), profiles(full_name)');
+    var query =
+        SupabaseService.table('transactions').select('*, transaction_items(*)');
 
     if (startDate != null) {
       query = query.gte('created_at', startDate.toIso8601String());
@@ -96,9 +114,7 @@ class TransactionRepository {
       query = query.ilike('transaction_number', '%$search%');
     }
 
-    final data = await query
-        .order('created_at', ascending: false)
-        .limit(limit);
+    final data = await query.order('created_at', ascending: false).limit(limit);
 
     return (data as List).map((e) => Transaction.fromJson(e)).toList();
   }
@@ -106,9 +122,13 @@ class TransactionRepository {
   // ─── Get Transaction Detail ───
   Future<Transaction> getTransaction(String id) async {
     final data = await SupabaseService.table('transactions')
-        .select('*, transaction_items(*), profiles(full_name)')
+        .select('*, transaction_items(*)')
         .eq('id', id)
-        .single();
+        .maybeSingle();
+
+    if (data == null) {
+      throw Exception('Transaction not found');
+    }
     return Transaction.fromJson(data);
   }
 
@@ -168,7 +188,8 @@ class TransactionRepository {
   }
 
   // ─── Best Selling Products ───
-  Future<List<Map<String, dynamic>>> getBestSellingProducts({int limit = 5}) async {
+  Future<List<Map<String, dynamic>>> getBestSellingProducts(
+      {int limit = 5}) async {
     final data = await SupabaseService.table('transaction_items')
         .select('product_id, product_name, quantity')
         .order('created_at', ascending: false)
@@ -213,13 +234,15 @@ class TransactionRepository {
     final Map<String, double> dailyMap = {};
     for (int i = 0; i < days; i++) {
       final date = startDate.add(Duration(days: i));
-      final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final key =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       dailyMap[key] = 0;
     }
 
     for (final item in data as List) {
       final date = DateTime.parse(item['created_at'] as String);
-      final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final key =
+          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       dailyMap[key] = (dailyMap[key] ?? 0) + (item['total'] as num).toDouble();
     }
 

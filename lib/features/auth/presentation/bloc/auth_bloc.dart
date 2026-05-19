@@ -47,6 +47,16 @@ class AuthPinLoginRequested extends AuthEvent {
   List<Object?> get props => [pin];
 }
 
+class AuthUpdateProfileRequested extends AuthEvent {
+  final String? fullName;
+  final String? pin;
+
+  AuthUpdateProfileRequested({this.fullName, this.pin});
+
+  @override
+  List<Object?> get props => [fullName, pin];
+}
+
 // ─── States ───
 abstract class AuthState extends Equatable {
   @override
@@ -89,6 +99,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthPinLoginRequested>(_onPinLoginRequested);
+    on<AuthUpdateProfileRequested>(_onUpdateProfileRequested);
   }
 
   Future<void> _onCheckRequested(
@@ -164,6 +175,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (e) {
       emit(AuthError(e.toString().replaceAll('Exception: ', '')));
+    }
+  }
+
+  Future<void> _onUpdateProfileRequested(
+    AuthUpdateProfileRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is! AuthAuthenticated) return;
+
+    emit(AuthLoading());
+    try {
+      final updatedUser = currentState.user.copyWith(
+        fullName: event.fullName,
+        pin: event.pin,
+      );
+
+      final profile = await _repository.updateProfile(updatedUser);
+      emit(AuthAuthenticated(profile));
+    } catch (e) {
+      emit(AuthError(e.toString().replaceAll('Exception: ', '')));
+      // Revert to previous state so user isn't stuck in loading
+      emit(currentState);
     }
   }
 }

@@ -19,6 +19,7 @@ class _PinLoginScreenState extends State<PinLoginScreen> {
   bool _isLoading = false;
 
   void _onKeyPress(String value) {
+    if (_isLoading) return;
     if (_pin.length < _pinLength) {
       setState(() {
         _pin += value;
@@ -170,13 +171,13 @@ class _PinLoginScreenState extends State<PinLoginScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              const SizedBox(width: 70), // Placeholder for alignment
+              const SizedBox(width: 75), // Placeholder for alignment
               _buildNumpadButton('0'),
               SizedBox(
-                width: 70,
-                height: 70,
+                width: 75,
+                height: 75,
                 child: IconButton(
-                  onPressed: _onBackspace,
+                  onPressed: _isLoading ? null : _onBackspace,
                   icon: const Icon(Icons.backspace_outlined),
                   color: AppColors.gray,
                 ),

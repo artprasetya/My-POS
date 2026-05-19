@@ -28,6 +28,37 @@ class TransactionDetailRequested extends TransactionEvent {
   List<Object?> get props => [transactionId];
 }
 
+class TransactionCreateRequested extends TransactionEvent {
+  final List<dynamic> items;
+  final double subtotal;
+  final double discountAmount;
+  final double taxAmount;
+  final double total;
+  final String paymentMethod;
+  final String? notes;
+
+  TransactionCreateRequested({
+    required this.items,
+    required this.subtotal,
+    required this.discountAmount,
+    required this.taxAmount,
+    required this.total,
+    required this.paymentMethod,
+    this.notes,
+  });
+
+  @override
+  List<Object?> get props => [
+        items,
+        subtotal,
+        discountAmount,
+        taxAmount,
+        total,
+        paymentMethod,
+        notes,
+      ];
+}
+
 // ─── States ───
 abstract class TransactionState extends Equatable {
   @override
@@ -62,6 +93,14 @@ class TransactionError extends TransactionState {
   List<Object?> get props => [message];
 }
 
+class TransactionCreateSuccess extends TransactionState {
+  final Transaction transaction;
+  TransactionCreateSuccess(this.transaction);
+
+  @override
+  List<Object?> get props => [transaction];
+}
+
 // ─── Bloc ───
 class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
   final TransactionRepository _repository;
@@ -71,6 +110,7 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
         super(TransactionInitial()) {
     on<TransactionsLoadRequested>(_onLoadTransactions);
     on<TransactionDetailRequested>(_onLoadDetail);
+    on<TransactionCreateRequested>(_onCreateTransaction);
   }
 
   Future<void> _onLoadTransactions(
@@ -98,6 +138,27 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
     try {
       final transaction = await _repository.getTransaction(event.transactionId);
       emit(TransactionDetailLoaded(transaction));
+    } catch (e) {
+      emit(TransactionError(e.toString()));
+    }
+  }
+
+  Future<void> _onCreateTransaction(
+    TransactionCreateRequested event,
+    Emitter<TransactionState> emit,
+  ) async {
+    emit(TransactionLoading());
+    try {
+      final transaction = await _repository.createTransaction(
+        items: event.items.cast(),
+        subtotal: event.subtotal,
+        discountAmount: event.discountAmount,
+        taxAmount: event.taxAmount,
+        total: event.total,
+        paymentMethod: event.paymentMethod,
+        notes: event.notes,
+      );
+      emit(TransactionCreateSuccess(transaction));
     } catch (e) {
       emit(TransactionError(e.toString()));
     }
