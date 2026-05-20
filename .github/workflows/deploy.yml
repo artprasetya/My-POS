@@ -49,12 +49,12 @@ jobs:
             BASE_HREF="/My-POS/"
             TARGET_FOLDER="."
             ENTRY_POINT="lib/main_production.dart"
-            ENV_FILE=".env.production"
+            ENV_FILE="env_production"
           else
             BASE_HREF="/My-POS/staging/"
             TARGET_FOLDER="staging"
             ENTRY_POINT="lib/main_staging.dart"
-            ENV_FILE=".env.staging"
+            ENV_FILE="env_staging"
           fi
           
           echo "Selected Environment: $ENV"
@@ -71,8 +71,8 @@ jobs:
       - name: Create directories & dummy env files
         run: |
           mkdir -p assets assets/icons assets/images
-          touch .env.staging
-          touch .env.production
+          touch env_staging
+          touch env_production
 
       - name: Install dependencies
         run: flutter pub get

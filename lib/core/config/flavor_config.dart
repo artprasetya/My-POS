@@ -29,9 +29,9 @@ class FlavorConfig {
   static String get envFileName {
     switch (flavor) {
       case Flavor.staging:
-        return '.env.staging';
+        return 'env_staging';
       case Flavor.production:
-        return '.env.production';
+        return 'env_production';
     }
   }
 
