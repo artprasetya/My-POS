@@ -35680,8 +35680,8 @@ _.a=f
 _.b=$
 _.c=g
 _.d=!1},
-bAm(){switch($.beX.a){case 0:return".env.staging"
-case 1:return".env.production"}},
+bAm(){switch($.beX.a){case 0:return"env_staging"
+case 1:return"env_production"}},
 axx:function axx(a,b){this.a=a
 this.b=b},
 beQ(a){var s=0,r=A.v(t.H),q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b
